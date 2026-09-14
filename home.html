@@ -1,0 +1,2982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Tick Tock</title>
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    font-family:Arial,sans-serif;
+}
+
+body{
+    background:#050509;
+    color:white;
+    overflow:hidden;
+}
+
+#feed{
+    height:100vh;
+    overflow-y:auto;
+    scroll-snap-type:y mandatory;
+}
+
+.reel{
+    height:100vh;
+    position:relative;
+    scroll-snap-align:start;
+    background:#08080f;
+}
+
+.reel video{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+}
+
+.topbar{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    z-index:20;
+    padding:18px 22px;
+    display:flex;
+    justify-content:space-between;
+    background:linear-gradient(
+        rgba(0,0,0,.7),
+        transparent
+    );
+}
+
+.logo{
+    font-size:27px;
+    font-weight:900;
+}
+
+.logo span{
+    background:linear-gradient(
+        90deg,#ff2d8d,#7957ff,#00d9ff
+    );
+    -webkit-background-clip:text;
+    color:transparent;
+}
+
+.top-buttons{
+    display:flex;
+    gap:10px;
+}
+
+.icon-btn{
+    width:45px;
+    height:45px;
+    border:0;
+    border-radius:50%;
+    background:rgba(20,20,35,.8);
+    color:white;
+    font-size:21px;
+    cursor:pointer;
+}
+
+.side{
+    position:absolute;
+    right:15px;
+    bottom:90px;
+    z-index:5;
+    display:flex;
+    flex-direction:column;
+    gap:17px;
+}
+
+.action{
+    width:55px;
+    text-align:center;
+    cursor:pointer;
+}
+
+.circle{
+    width:49px;
+    height:49px;
+    border-radius:50%;
+    background:rgba(0,0,0,.55);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:22px;
+}
+
+.action small{
+    font-size:11px;
+    margin-top:4px;
+    display:block;
+}
+
+.bottom-info{
+    position:absolute;
+    left:18px;
+    right:85px;
+    bottom:25px;
+    z-index:5;
+    text-shadow:0 2px 8px #000;
+}
+
+.creator{
+    font-size:18px;
+    font-weight:bold;
+    margin-bottom:7px;
+}
+
+.caption{
+    font-size:14px;
+}
+
+.sound{
+    margin-top:7px;
+    font-size:12px;
+}
+
+/* SOUND */
+
+.gate{
+    position:fixed;
+    inset:0;
+    z-index:100;
+    background:#060610;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.gate-card{
+    width:min(420px,90%);
+    padding:35px;
+    border-radius:28px;
+    text-align:center;
+    background:#15152b;
+    box-shadow:0 20px 80px #000;
+}
+
+.gate-card h1{
+    font-size:32px;
+    margin-bottom:10px;
+}
+
+.gate-card p{
+    color:#aaa;
+    margin-bottom:25px;
+}
+
+.primary{
+    width:100%;
+    border:0;
+    padding:15px;
+    border-radius:15px;
+    color:white;
+    font-weight:bold;
+    font-size:16px;
+    background:linear-gradient(
+        90deg,#ff2d8d,#7055ff
+    );
+    cursor:pointer;
+}
+
+.source-card{
+    width:100%;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:16px;
+    border:1px solid #30304b;
+    border-radius:18px;
+    background:#19192b;
+    color:white;
+    text-align:left;
+    cursor:pointer;
+}
+.source-card:hover{
+    background:#252541;
+    transform:translateY(-1px);
+}
+.source-icon{
+    width:48px;
+    height:48px;
+    border-radius:14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:linear-gradient(135deg,#ff2d8d,#7055ff);
+    font-size:24px;
+    flex-shrink:0;
+}
+.source-card strong{
+    display:block;
+    font-size:16px;
+}
+.source-card small{
+    display:block;
+    color:#999;
+    margin-top:4px;
+    font-size:12px;
+}
+
+/* PANELS */
+
+.panel-bg{
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:60;
+    background:rgba(0,0,0,.7);
+    backdrop-filter:blur(7px);
+}
+
+.panel{
+    position:absolute;
+    left:50%;
+    bottom:0;
+    transform:translateX(-50%);
+    width:min(620px,100%);
+    max-height:88vh;
+    overflow-y:auto;
+    background:#101020;
+    border-radius:28px 28px 0 0;
+    padding:24px;
+}
+
+.panel-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+}
+
+.close{
+    width:38px;
+    height:38px;
+    border:0;
+    border-radius:50%;
+    background:#292941;
+    color:white;
+    font-size:17px;
+    cursor:pointer;
+}
+
+/* PROFILE */
+
+.profile-card{
+    text-align:center;
+}
+
+.avatar{
+    width:100px;
+    height:100px;
+    border-radius:50%;
+    margin:auto;
+    object-fit:cover;
+    background:linear-gradient(
+        135deg,#ff3c9b,#704cff
+    );
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:42px;
+}
+
+.profile-card h2{
+    margin-top:14px;
+}
+
+.uid{
+    color:#9b8cff;
+    font-size:13px;
+    margin-top:6px;
+}
+
+.bio{
+    color:#aaa;
+    margin:14px 0;
+}
+
+.profile-buttons{
+    display:flex;
+    gap:10px;
+}
+
+.profile-buttons button{
+    flex:1;
+    border:0;
+    border-radius:14px;
+    padding:13px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.edit{
+    background:white;
+    color:#111;
+}
+
+.friends{
+    background:#282844;
+    color:white;
+}
+
+.logout{
+    background:#5a2028;
+    color:#fff;
+}
+
+.profile-buttons{
+    flex-wrap:wrap;
+}
+
+.profile-buttons button{
+    min-width:140px;
+}
+
+/* FRIENDS */
+
+.search{
+    display:flex;
+    gap:8px;
+}
+
+.search input{
+    flex:1;
+    background:#19192d;
+    border:1px solid #30304b;
+    color:white;
+    border-radius:13px;
+    padding:13px;
+    outline:none;
+}
+
+.search button{
+    border:0;
+    border-radius:13px;
+    padding:0 17px;
+    background:#7055ff;
+    color:white;
+    cursor:pointer;
+}
+
+.section{
+    color:#999;
+    font-size:14px;
+    margin:20px 0 9px;
+}
+
+.user-card{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px;
+    background:#19192b;
+    border-radius:16px;
+    margin:8px 0;
+}
+
+.user-avatar{
+    width:48px;
+    height:48px;
+    border-radius:50%;
+    object-fit:cover;
+    background:linear-gradient(
+        135deg,#ff3c9b,#704cff
+    );
+}
+
+.user-info{
+    flex:1;
+}
+
+.user-info strong{
+    display:block;
+}
+
+.user-info small{
+    color:#888;
+}
+
+.user-card button{
+    border:0;
+    border-radius:10px;
+    padding:9px 12px;
+    background:#7055ff;
+    color:white;
+    cursor:pointer;
+}
+
+.accept{
+    background:#13b878 !important;
+}
+
+.reject{
+    background:#34344c !important;
+}
+
+/* COMMENTS */
+
+.comments-panel{
+    position:fixed;
+    left:50%;
+    bottom:0;
+    transform:translateX(-50%);
+    width:min(620px,100%);
+    height:72vh;
+    background:#11111f;
+    border-radius:28px 28px 0 0;
+    z-index:80;
+    display:none;
+    flex-direction:column;
+    box-shadow:0 -20px 70px #000;
+}
+
+.comments-head{
+    padding:18px 20px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    border-bottom:1px solid #29293d;
+}
+
+.comments-count{
+    color:#888;
+    font-size:13px;
+    margin-top:4px;
+}
+
+.comments-list{
+    flex:1;
+    overflow-y:auto;
+    padding:15px;
+}
+
+.comment-item{
+    display:flex;
+    gap:10px;
+    margin-bottom:17px;
+}
+
+.comment-avatar{
+    width:40px;
+    height:40px;
+    border-radius:50%;
+    background:linear-gradient(
+        135deg,#ff3c9b,#704cff
+    );
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+}
+
+.comment-body{
+    background:#1b1b2d;
+    border-radius:15px;
+    padding:10px 13px;
+    flex:1;
+}
+
+.comment-user{
+    font-weight:bold;
+    font-size:14px;
+}
+
+.comment-text{
+    color:#ccc;
+    margin-top:4px;
+    font-size:14px;
+}
+
+.comment-input{
+    padding:12px;
+    display:flex;
+    gap:8px;
+    border-top:1px solid #29293d;
+}
+
+.comment-input input{
+    flex:1;
+    background:#1b1b2d;
+    border:1px solid #30304b;
+    color:white;
+    border-radius:14px;
+    padding:13px;
+    outline:none;
+}
+
+.comment-input button{
+    width:50px;
+    border:0;
+    border-radius:14px;
+    background:#7055ff;
+    color:white;
+    font-size:19px;
+    cursor:pointer;
+}
+
+/* LOCATION */
+
+.location{
+    display:none;
+    position:fixed;
+    z-index:90;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    width:min(420px,90%);
+    padding:28px;
+    border-radius:24px;
+    text-align:center;
+    background:#151528;
+}
+
+.location p{
+    color:#aaa;
+    margin:12px 0 20px;
+}
+
+.location-buttons{
+    display:flex;
+    gap:10px;
+}
+
+.location-buttons button{
+    flex:1;
+    border:0;
+    border-radius:13px;
+    padding:12px;
+    cursor:pointer;
+}
+
+.allow{
+    background:#7055ff;
+    color:white;
+}
+
+.skip{
+    background:#292940;
+    color:white;
+}
+
+.friend-profile-photo{width:90px;height:90px;border-radius:50%;object-fit:cover;background:#222;margin:auto;display:block}.profile-video-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}.profile-video-grid video{width:100%;height:150px;object-fit:cover;border-radius:9px;background:#000}.last-seen{color:#8ee6a8;font-size:12px;margin-top:6px}
+</style>
+
+<style>
+#socialPanel .panel{max-width:620px}
+.social-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+.social-stat{background:#19192b;border:1px solid #2b2b48;border-radius:14px;padding:12px;text-align:center}
+.social-stat b{display:block;font-size:20px}.social-stat small{color:#aaa}
+.social-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:12px 0}
+.social-tabs button{border:0;border-radius:11px;padding:10px 5px;background:#19192b;color:#fff;cursor:pointer}
+.social-tabs button.active{background:#7055ff}
+.social-list{max-height:330px;overflow:auto}
+.social-card{display:flex;align-items:center;gap:10px;background:#151528;border:1px solid #292940;border-radius:13px;padding:10px;margin:8px 0}
+.social-card .info{flex:1;min-width:0}.social-card strong{display:block}.social-card small{color:#999}
+.social-card button{border:0;border-radius:10px;padding:8px 10px;cursor:pointer;background:#7055ff;color:#fff}
+.social-card button.gray{background:#292940}.social-card button.red{background:#5a2028}
+.social-search{display:flex;gap:7px}.social-search input{flex:1;padding:11px;border-radius:11px;border:1px solid #30304b;background:#11111f;color:#fff}
+.chat-box{height:360px;display:flex;flex-direction:column}.chat-head{display:flex;align-items:center;gap:8px;padding-bottom:8px}.chat-messages{flex:1;overflow:auto;background:#0c0c16;border-radius:14px;padding:10px}.chat-msg{margin:7px 0;max-width:80%;background:#19192b;padding:8px 10px;border-radius:12px}.chat-msg.mine{margin-left:auto;background:#7055ff}.chat-msg small{display:block;opacity:.65;font-size:10px}.chat-send{display:flex;gap:7px;margin-top:8px}.chat-send input{flex:1;padding:11px;border-radius:11px;border:1px solid #30304b;background:#11111f;color:#fff}.chat-send button{border:0;border-radius:11px;background:#7055ff;color:#fff;padding:0 16px}
+.profile-social-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.profile-social-actions button{border:0;border-radius:12px;padding:11px;background:#19192b;color:#fff;cursor:pointer}
+.back-btn{position:fixed;top:12px;left:12px;z-index:10000;border:0;border-radius:12px;padding:9px 13px;background:rgba(20,20,35,.88);color:#fff;cursor:pointer}
+.profile-view{background:#151528;border:1px solid #292940;border-radius:18px;padding:16px;text-align:center;margin-bottom:12px}.profile-view-avatar{width:96px;height:96px;border-radius:50%;object-fit:cover;background:linear-gradient(135deg,#ff3c9b,#704cff);display:flex;align-items:center;justify-content:center;font-size:40px;margin:0 auto 10px}.profile-view h3{font-size:21px;margin-bottom:4px}.profile-view .bio{margin:8px 0 12px}.profile-actions{display:flex;flex-wrap:wrap;gap:7px;justify-content:center}.profile-actions button{border:0;border-radius:11px;padding:9px 12px;background:#7055ff;color:#fff;cursor:pointer}.profile-actions button.gray{background:#292940}.profile-videos-title{text-align:left;font-weight:bold;margin:12px 2px 8px}.video-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.video-grid video{width:100%;height:150px;object-fit:cover;border-radius:9px;background:#000}.profile-video-card{background:#11111f;border-radius:10px;overflow:hidden}.profile-video-card video{cursor:pointer}.profile-video-actions{display:flex;gap:4px;padding:5px}.profile-video-actions button{flex:1;border:0;border-radius:8px;padding:7px;background:#292940;color:#fff;cursor:pointer}.profile-sub-badge{display:inline-block;margin-top:7px;padding:5px 9px;border-radius:20px;background:#2b234b;color:#d7c8ff;font-size:12px}.uid-copy{cursor:pointer}.social-stat{cursor:pointer}
+@media(max-width:600px){.social-tabs{grid-template-columns:repeat(3,1fr)}.video-grid{grid-template-columns:repeat(2,1fr)}.video-grid video{height:180px}}
+</style>
+
+
+<style>
+.feed-mode-buttons{position:fixed;top:75px;left:50%;transform:translateX(-50%);z-index:25;display:flex;gap:6px;background:rgba(10,10,20,.75);padding:5px;border-radius:16px;backdrop-filter:blur(8px)}
+.feed-mode-buttons button{border:0;border-radius:12px;padding:8px 12px;background:#19192b;color:#fff;cursor:pointer;font-weight:bold}.feed-mode-buttons button.active{background:#7055ff}
+.wallet-chip{position:fixed;right:18px;bottom:18px;z-index:30;border:0;border-radius:18px;padding:10px 14px;background:#19192b;color:#fff;cursor:pointer;font-weight:bold}
+.store-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.store-card{background:#19192b;border:1px solid #30304b;border-radius:15px;padding:14px;text-align:center}.store-card button{border:0;border-radius:11px;padding:9px 13px;background:#7055ff;color:#fff;margin-top:8px;cursor:pointer}
+.qr-box{background:#fff;padding:12px;border-radius:15px;width:260px;margin:12px auto}.qr-box img{width:100%;display:block}.payment-note{color:#888;font-size:12px;margin-top:8px}.uid-copy{cursor:pointer;color:#9b8cff}
+</style>
+</head>
+
+<body>
+<button class="back-btn" onclick="goBack()">← Back</button>
+<form id="homeUploadForm" method="POST" action="/upload" enctype="multipart/form-data" style="display:none;">
+    <input id="homeVideoPicker" type="file" name="video" accept="video/*">
+    <input id="homeCaption" type="hidden" name="caption">
+    <input id="homeTags" type="hidden" name="tags">
+    <input id="homePrivacy" type="hidden" name="privacy" value="public">
+</form>
+
+<div id="recordReviewPanel" class="panel-bg">
+    <div class="panel">
+        <div class="panel-head">
+            <h2>🎬 Preview Reel</h2>
+            <button class="close" type="button" onclick="cancelRecording()">✕</button>
+        </div>
+        <video id="recordedPreview" controls playsinline
+               style="width:100%;max-height:55vh;background:#000;border-radius:18px;"></video>
+
+        <label style="display:block;margin-top:16px;margin-bottom:7px;font-weight:bold;">Caption</label>
+        <textarea id="recordCaption" maxlength="500" placeholder="Write a caption..."
+                  style="width:100%;min-height:85px;padding:12px;border-radius:13px;
+                         background:#19192b;color:white;border:1px solid #30304b;resize:vertical;"></textarea>
+
+        <label style="display:block;margin-top:14px;margin-bottom:7px;font-weight:bold;">Tags / Hashtags</label>
+        <input id="recordTags" maxlength="500" type="text" placeholder="#india #cricket #fun"
+               style="width:100%;padding:12px;border-radius:13px;background:#19192b;color:white;border:1px solid #30304b;">
+
+        <label style="display:block;margin-top:14px;margin-bottom:7px;font-weight:bold;">Who can watch this video?</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <button type="button" id="recordPublicBtn" class="primary" onclick="setRecordPrivacy('public')">🌍 Public</button>
+            <button type="button" id="recordPrivateBtn" class="secondary" onclick="setRecordPrivacy('private')">🔒 Private</button>
+        </div>
+        <p id="recordPrivacyStatus" style="color:#aaa;font-size:13px;margin:10px 0 0;">Public — can appear in the Home feed.</p>
+
+        <button type="button" class="primary" onclick="postRecordedReel()" style="margin-top:12px;">🚀 Post Reel</button>
+    </div>
+</div>
+
+<div id="cameraPanel" class="panel-bg">
+    <div class="panel" style="text-align:center;">
+        <div class="panel-head">
+            <h2>🎥 Create Reel</h2>
+            <button class="close" type="button" onclick="closeCamera()">✕</button>
+        </div>
+        <video id="cameraPreview" autoplay playsinline
+               style="width:100%;max-height:55vh;background:#000;border-radius:18px;"></video>
+        <div style="display:flex;gap:10px;margin-top:15px;">
+            <button type="button" class="primary" id="startRecordBtn"
+                    onclick="startCamera()">📷 Start Camera</button>
+            <button type="button" class="primary" id="recordBtn"
+                    onclick="toggleRecording()" style="display:none;">🔴 Start Recording</button>
+        </div>
+        <p id="cameraStatus" style="color:#aaa;margin-top:12px;">
+            Choose Camera to record a new Reel.
+        </p>
+    </div>
+</div>
+
+
+<!-- CREATE REEL CHOOSER -->
+<div class="panel-bg" id="createReelPanel">
+    <div class="panel">
+        <div class="panel-head">
+            <h2>➕ Create Reel</h2>
+            <button class="close" type="button" onclick="closeCreateReel()">✕</button>
+        </div>
+
+        <button type="button" class="source-card" onclick="openCamera()">
+            <span class="source-icon">📷</span>
+            <span>
+                <strong>Camera</strong>
+                <small>Record a new Reel with camera + microphone</small>
+            </span>
+        </button>
+
+        <button type="button" class="source-card"
+                onclick="chooseHomeVideo()"
+                style="margin-top:12px;">
+            <span class="source-icon">🎬</span>
+            <span>
+                <strong>Choose Video</strong>
+                <small>Select a video from your laptop</small>
+            </span>
+        </button>
+</div>
+</div>
+
+<!-- SOUND GATE -->
+
+<div class="gate" id="gate">
+
+    <div class="gate-card">
+
+        <h1>🎵 Tick Tock</h1>
+
+        <p>
+            Enter your feed with sound enabled.
+        </p>
+
+        <button
+            class="primary"
+            onclick="enterApp()"
+        >
+            🔊 Enter with Sound
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- TOP -->
+
+<div class="topbar">
+
+    <div class="logo">
+        <span>Tick Tock</span>
+    </div>
+
+    <div class="top-buttons">
+
+        <button
+            class="icon-btn"
+            onclick="refreshReels()"
+            title="Refresh Reels"
+            id="refreshBtn"
+        >
+            🔄
+        </button>
+
+        <button
+            class="icon-btn"
+            type="button"
+            onclick="openCreateReel()"
+            title="Create Reel"
+        >
+            ➕
+        </button>
+
+        <button class="icon-btn" onclick="openSearch()" title="Search">🔎</button>
+
+        <button
+            class="icon-btn"
+            onclick="openNotifications()"
+            title="Notifications"
+            id="notificationBtn"
+            style="position:relative"
+        >
+            🔔<span id="notificationBadge" style="display:none;position:absolute;top:-5px;right:-5px;background:red;color:white;border-radius:20px;padding:2px 6px;font-size:10px"></span>
+        </button>
+
+        <button
+            class="icon-btn"
+            onclick="openFriends()"
+            title="Friends"
+        >
+            👥
+        </button>
+
+        <button
+            class="icon-btn"
+            onclick="openProfile()"
+        >
+            👤
+        </button>
+
+    </div>
+
+</div>
+
+<div class="feed-mode-buttons">
+  <button id="normalFeedBtn" class="active" onclick="showFeedMode('normal')">🎬 For You</button>
+  <button id="friendsFeedBtn" onclick="showFeedMode('friends')">👥 Friends Reels</button>
+</div>
+<button class="wallet-chip" onclick="openStore()">💎 <span id="diamondCount">0</span></button>
+
+<!-- FEED -->
+
+<div id="feed"></div>
+
+
+<!-- PROFILE -->
+
+<div
+    class="panel-bg"
+    id="profilePanel"
+>
+
+    <div class="panel">
+
+        <div class="panel-head">
+
+            <h2>My Profile</h2>
+
+            <button
+                class="close"
+                onclick="closePanels()"
+            >
+                ✕
+            </button>
+
+        </div>
+
+        <div class="profile-card">
+
+            <div
+                id="myAvatar"
+                class="avatar"
+            >
+                👤
+            </div>
+
+            <h2 id="myUsername">
+                Loading...
+            </h2>
+
+            <div
+                class="uid"
+                id="myUid"
+            >
+                UID
+            </div>
+
+            <div
+                class="bio"
+                id="myBio"
+            >
+                Welcome to my Tick Tock profile 🚀
+            </div>
+
+            <div class="profile-buttons">
+
+                <button
+                    class="edit"
+                    onclick="
+                    location.href='/profile-setup'
+                    "
+                >
+                    ✏️ Edit Profile
+                </button>
+
+                <button
+                    class="friends"
+                    onclick="openFriends()"
+                >
+                    👥 Friends
+                </button>
+
+                <button
+                    class="friends"
+                    onclick="switchUser()"
+                    title="Switch to another account"
+                >
+                    🔄 Switch User
+                </button>
+
+                <button
+                    class="logout"
+                    onclick="logoutUser()"
+                    title="Log out of Tick Tock"
+                >
+                    🚪 Log Out
+                </button>
+
+            </div>
+
+            <div class="profile-social-actions">
+                <button onclick="openSocial('videos')">🎬 My Reels</button>
+                <button onclick="openSocial('private')">🔒 Private</button>
+                <button onclick="openSocial('followers')">👥 Followers</button>
+                <button onclick="openSocial('following')">➡️ Following</button>
+                <button onclick="openSocial('find')">🔎 Find by UID</button>
+                <button onclick="openSocial('chats')">💬 Messages</button>
+                <button onclick="openSocial('groups')">👨‍👩‍👧 Groups</button>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- SEARCH -->
+<div class="panel-bg" id="searchPanel">
+  <div class="panel">
+    <div class="panel-head"><h2>🔎 Search Tick Tock</h2><button class="close" onclick="closeSearch()">✕</button></div>
+    <div class="social-search"><input id="globalSearchInput" placeholder="Search people, UID, Reels, hashtags..." onkeydown="if(event.key==='Enter')runGlobalSearch()"><button onclick="runGlobalSearch()">Search</button></div>
+    <div id="globalSearchResults" class="social-list" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<!-- NOTIFICATIONS -->
+<div class="panel-bg" id="notificationsPanel">
+    <div class="panel">
+        <div class="panel-head">
+            <h2>🔔 Notifications</h2>
+            <button class="close" onclick="closePanels()">✕</button>
+        </div>
+        <div id="notificationList" style="max-height:70vh;overflow:auto">Loading...</div>
+    </div>
+</div>
+
+<!-- FRIENDS -->
+
+<div
+    class="panel-bg"
+    id="friendsPanel"
+>
+
+    <div class="panel">
+
+        <div class="panel-head">
+
+            <h2>👥 Friends</h2>
+
+            <button
+                class="close"
+                onclick="closePanels()"
+            >
+                ✕
+            </button>
+
+        </div>
+
+        <div class="search">
+
+            <input
+                id="uidSearch"
+                placeholder="Search UID"
+            >
+
+            <button onclick="searchUser()">
+                Search
+            </button>
+
+        </div>
+
+        <div id="searchResult"></div>
+
+        <div class="section">
+            📨 Friend Requests
+        </div>
+
+        <div id="requests">
+            Loading...
+        </div>
+
+        <div class="section">
+            💜 My Friends
+        </div>
+
+        <div id="friendList">
+            Loading...
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- SOCIAL HUB -->
+<div class="panel-bg" id="socialPanel">
+ <div class="panel">
+  <div class="panel-head"><h2 id="socialTitle">Social</h2><button class="close" onclick="closeSocial()">✕</button></div>
+  <div class="social-stats">
+   <div class="social-stat"><b id="followersCount">0</b><small>Followers</small></div>
+   <div class="social-stat"><b id="followingCount">0</b><small>Following</small></div>
+   <div class="social-stat"><b id="myUidSocial">----------</b><small>My UID</small></div>
+  </div>
+  <div class="social-tabs">
+   <button id="tab-videos" onclick="openSocial('videos')">🎬 Reels</button>
+   <button id="tab-private" onclick="openSocial('private')">🔒 Private</button>
+   <button id="tab-followers" onclick="openSocial('followers')">👥 Followers</button>
+   <button id="tab-following" onclick="openSocial('following')">➡️ Following</button>
+   <button id="tab-find" onclick="openSocial('find')">🔎 UID</button>
+   <button id="tab-chats" onclick="openSocial('chats')">💬 Chats</button>
+   <button id="tab-groups" onclick="openSocial('groups')">👨‍👩‍👧 Groups</button>
+    <button id="tab-saved" onclick="openSocial('saved')">🔖 Saved</button>
+    <button id="tab-activity" onclick="openSocial('activity')">👥 Friend Activity</button>
+    <button id="tab-analytics" onclick="openSocial('analytics')">📊 Analytics</button>
+  </div>
+  <div id="socialSearch" style="display:none" class="social-search"><input id="socialUidInput" placeholder="Enter 10-digit UID"><button onclick="socialFindUser()">Search</button></div>
+  <div id="socialContent" class="social-list"></div>
+ </div>
+</div>
+
+<!-- CHAT PANEL -->
+<div class="panel-bg" id="chatPanel">
+ <div class="panel"><div class="panel-head"><h2 id="chatTitle">💬 Message</h2><button class="close" onclick="closeChat()">✕</button></div>
+  <div class="chat-box"><div id="chatMessages" class="chat-messages"></div><div class="chat-send"><input id="chatInput" placeholder="Message..." maxlength="1000" onkeydown="if(event.key==='Enter')sendChat()"><button onclick="sendChat()">➤</button></div></div>
+ </div>
+</div>
+
+
+<!-- DIAMOND STORE -->
+<div class="panel-bg" id="storePanel">
+ <div class="panel">
+  <div class="panel-head"><h2>💎 Diamond Store</h2><button class="close" onclick="closeStore()">✕</button></div>
+  <div style="text-align:center;color:#aaa;margin-bottom:12px">Balance: 💎 <b id="storeDiamondCount">0</b></div>
+  <div class="store-card" style="margin-bottom:12px"><h3>👑 Membership ₹29</h3><p style="color:#aaa;margin:7px 0">Get 29 💎 + premium pre-access features</p><button onclick="buyMembership()">Buy Membership</button></div>
+  <h3 style="margin:10px 0">Top up Diamonds</h3>
+  <div class="store-grid">
+   <div class="store-card">₹29<br>💎 29<br><button onclick="startDiamondPayment(29,29)">Pay</button></div>
+   <div class="store-card">₹48<br>💎 60<br><button onclick="startDiamondPayment(48,60)">Pay</button></div>
+   <div class="store-card">₹250<br>💎 270<br><button onclick="startDiamondPayment(250,270)">Pay</button></div>
+   <div class="store-card">₹621<br>💎 640<br><button onclick="startDiamondPayment(621,640)">Pay</button></div>
+   <div class="store-card">₹1000<br>💎 1020<br><button onclick="startDiamondPayment(1000,1020)">Pay</button></div>
+  </div>
+  <div id="paymentBox" style="display:none;text-align:center;margin-top:18px">
+   <h3>Scan & Pay</h3><div class="qr-box"><img id="paymentQr" alt="UPI payment QR"></div>
+   <div id="paymentDetails" style="color:#aaa"></div>
+   <input id="txnId" placeholder="Enter UPI transaction ID after payment" style="width:100%;padding:12px;border-radius:12px;background:#19192b;color:#fff;border:1px solid #30304b;margin-top:10px">
+   <button class="primary" style="margin-top:10px" onclick="submitPayment()">✅ Submit Payment</button>
+    <button type="button" style="margin-top:8px;width:100%;padding:11px;border:0;border-radius:11px;background:#292940;color:#fff;cursor:pointer" onclick="checkPaymentStatus()">🔄 Check Payment Status</button>
+   <p class="payment-note">Use the QR above for every package. After paying, enter your UPI transaction ID. Payment remains pending until it is verified.</p>
+  </div>
+ </div>
+</div>
+
+<!-- SHARE TO FRIEND PANEL -->
+<div class="panel-bg" id="shareFriendPanel" style="display:none">
+  <div class="panel"><div class="panel-head"><h2>👥 Send Reel</h2><button class="close" onclick="closeShareFriend()">✕</button></div><div id="shareFriendList" class="social-list">Loading friends...</div></div>
+</div>
+
+<!-- REPORT PANEL -->
+<div class="panel-bg" id="reportPanel" style="display:none">
+  <div class="panel">
+    <div class="panel-head"><h2>🚩 Report</h2><button class="close" onclick="closeReport()">✕</button></div>
+    <p style="color:#aaa;margin-bottom:12px">Tell us what is wrong with this Reel.</p>
+    <select id="reportReason" style="width:100%;padding:12px;border-radius:12px;background:#19192b;color:#fff;border:1px solid #30304b;margin-bottom:10px">
+      <option>Spam</option><option>Harassment</option><option>Violence</option><option>Sexual content</option><option>Hate or abuse</option><option>Copyright</option><option>Other</option>
+    </select>
+    <textarea id="reportDetails" maxlength="500" placeholder="Optional details" style="width:100%;min-height:100px;padding:12px;border-radius:12px;background:#19192b;color:#fff;border:1px solid #30304b"></textarea>
+    <button class="primary" style="width:100%;margin-top:10px" onclick="submitReelReport()">Submit Report</button>
+  </div>
+</div>
+
+<!-- VIDEO VIEWER -->
+<div class="panel-bg" id="videoViewerPanel">
+  <div class="panel" style="max-height:92vh">
+    <div class="panel-head"><h2 id="videoViewerTitle">🎬 Reel</h2><button class="close" onclick="closeVideoViewer()">✕</button></div>
+    <video id="profileVideoPlayer" controls playsinline style="width:100%;max-height:70vh;background:#000;border-radius:16px"></video>
+    <div id="profileVideoActions" style="display:flex;gap:8px;margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- COMMENTS -->
+
+<div
+    class="comments-panel"
+    id="commentsPanel"
+>
+
+    <div class="comments-head">
+
+        <div>
+
+            <h3>💬 Comments</h3>
+
+            <div
+                class="comments-count"
+                id="commentsCount"
+            >
+                0 comments
+            </div>
+
+        </div>
+
+        <button
+            class="close"
+            onclick="closeComments()"
+        >
+            ✕
+        </button>
+
+    </div>
+
+    <div
+        class="comments-list"
+        id="commentsList"
+    >
+    </div>
+
+    <div class="comment-input">
+
+        <input
+            id="commentInput"
+            placeholder="Add a comment..."
+            maxlength="300"
+            onkeydown="
+            if(event.key==='Enter') addComment()
+            "
+        >
+
+        <button onclick="addComment()">
+            ➤
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- LOCATION -->
+
+<div
+    class="location"
+    id="locationBox"
+>
+
+    <h2>📍 Location</h2>
+
+    <p>
+        Allow Tick Tock to use your location
+        for future nearby features.
+    </p>
+
+    <div class="location-buttons">
+
+        <button
+            class="allow"
+            onclick="allowLocation()"
+        >
+            Allow
+        </button>
+
+        <button
+            class="skip"
+            onclick="skipLocation()"
+        >
+            Not Now
+        </button>
+
+    </div>
+
+</div>
+
+
+<script>
+
+let currentCommentVideo = null;
+let soundUnlocked = false;
+
+
+function openCreateReel(){
+    document.getElementById("createReelPanel").style.display = "block";
+}
+
+function closeCreateReel(){
+    document.getElementById("createReelPanel").style.display = "none";
+}
+
+function chooseHomeVideo(){
+    closeCreateReel();
+    document.getElementById("homeVideoPicker").click();
+}
+
+document.getElementById("homeVideoPicker").addEventListener("change", function(){
+    const file = this.files && this.files[0];
+    if(!file) return;
+    window.recordedReelFile = file;
+    const preview = document.getElementById("recordedPreview");
+    if(window.homeGalleryPreviewUrl) URL.revokeObjectURL(window.homeGalleryPreviewUrl);
+    window.homeGalleryPreviewUrl = URL.createObjectURL(file);
+    preview.src = window.homeGalleryPreviewUrl;
+    document.getElementById("recordCaption").value = "";
+    document.getElementById("recordTags").value = "";
+    setRecordPrivacy("public");
+    document.getElementById("recordReviewPanel").style.display = "block";
+    preview.load();
+});
+
+/* ==========================================
+   ENTER
+========================================== */
+
+function enterApp(){
+
+    soundUnlocked = true;
+
+    document.getElementById(
+        "gate"
+    ).style.display = "none";
+
+    document.getElementById(
+        "locationBox"
+    ).style.display = "block";
+
+    startCurrentVideoWithSound();
+
+}
+
+
+/* ==========================================
+   ACCOUNT + REFRESH
+========================================== */
+
+function switchUser(){
+    window.location.href = "/switch-account";
+}
+
+function logoutUser(){
+    if(confirm("Log out of Tick Tock?")){
+        window.location.href = "/logout";
+    }
+}
+
+async function refreshReels(){
+
+    const button = document.getElementById("refreshBtn");
+
+    if(button){
+        button.disabled = true;
+        button.textContent = "⏳";
+    }
+
+    try{
+        await fetch("/api/refresh", {method:"POST"});
+        await loadVideos();
+        document.getElementById("feed").scrollTop = 0;
+    }catch(error){
+        console.log(error);
+        alert("Could not refresh Reels.");
+    }finally{
+        if(button){
+            button.disabled = false;
+            button.textContent = "🔄";
+        }
+    }
+}
+
+function startCurrentVideoWithSound(){
+
+    const videos = document.querySelectorAll(".reel video");
+
+    if(!videos.length) return;
+
+    const first = videos[0];
+
+    document.querySelectorAll(".reel video").forEach(v => {
+        v.muted = true;
+        v.pause();
+    });
+
+    first.muted = false;
+    first.volume = 1;
+
+    first.play().catch(error => {
+        console.log("Sound autoplay was blocked:", error);
+    });
+}
+
+function openUploadMenu(){
+    document.getElementById("uploadSourcePanel").style.display = "block";
+}
+
+function closeUploadMenu(){
+    document.getElementById("uploadSourcePanel").style.display = "none";
+}
+
+function openMyUpload(){
+    window.location.href = "/upload";
+}
+
+function showFriendsReels(){
+    closeUploadMenu();
+    openFriends();
+}
+
+async function showInternetReels(){
+    closeUploadMenu();
+    await refreshReels();
+}
+
+
+let cameraStream = null;
+let mediaRecorder = null;
+let recordedChunks = [];
+let recordPrivacy = "public";
+
+function openCreateReel(){
+    document.getElementById("createReelPanel").style.display = "block";
+}
+
+function closeCreateReel(){
+    document.getElementById("createReelPanel").style.display = "none";
+}
+
+async function openCamera(){
+    closeCreateReel();
+    document.getElementById("cameraPanel").style.display = "block";
+    await startCamera();
+}
+
+async function startCamera(){
+    try{
+        if(cameraStream) cameraStream.getTracks().forEach(t => t.stop());
+
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+            video:true,
+            audio:true
+        });
+
+        const preview = document.getElementById("cameraPreview");
+        preview.srcObject = cameraStream;
+
+        document.getElementById("startRecordBtn").style.display = "none";
+        document.getElementById("recordBtn").style.display = "block";
+        document.getElementById("cameraStatus").textContent =
+            "Camera ready. Press Start Recording.";
+    }catch(error){
+        document.getElementById("cameraStatus").textContent =
+            "Camera permission was denied or camera is unavailable.";
+        alert("Please allow camera and microphone permission.");
+    }
+}
+
+function toggleRecording(){
+    const btn = document.getElementById("recordBtn");
+
+    if(mediaRecorder && mediaRecorder.state === "recording"){
+        mediaRecorder.stop();
+        btn.textContent = "🔴 Start Recording";
+        document.getElementById("cameraStatus").textContent =
+            "Recording finished. Preparing your Reel...";
+        return;
+    }
+
+    recordedChunks = [];
+    const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+        ? "video/webm;codecs=vp9,opus"
+        : "video/webm";
+
+    mediaRecorder = new MediaRecorder(cameraStream, {mimeType:mime});
+
+    mediaRecorder.ondataavailable = e => {
+        if(e.data.size > 0) recordedChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, {type:"video/webm"});
+        window.recordedReelFile = new File(
+            [blob],
+            "ticktock_camera_reel.webm",
+            {type:"video/webm"}
+        );
+
+        const preview = document.getElementById("recordedPreview");
+        preview.src = URL.createObjectURL(blob);
+
+        closeCamera();
+        document.getElementById("recordReviewPanel").style.display = "block";
+        document.getElementById("cameraStatus").textContent =
+            "Recording finished. Preview your Reel before posting.";
+    };
+
+    mediaRecorder.start();
+    btn.textContent = "⏹️ Stop Recording";
+    document.getElementById("cameraStatus").textContent =
+        "🔴 Recording... Press Stop Recording when finished.";
+}
+
+function closeCamera(){
+    if(cameraStream){
+        cameraStream.getTracks().forEach(t => t.stop());
+        cameraStream = null;
+    }
+    document.getElementById("cameraPanel").style.display = "none";
+}
+
+
+function setRecordPrivacy(value){
+    window.recordPrivacy = value;
+    const pub = document.getElementById("recordPublicBtn");
+    const pri = document.getElementById("recordPrivateBtn");
+    const status = document.getElementById("recordPrivacyStatus");
+    if(value === "private"){
+        pri.style.opacity = "1"; pub.style.opacity = ".55";
+        status.textContent = "Private — this Reel will stay out of the public Home feed.";
+    }else{
+        pub.style.opacity = "1"; pri.style.opacity = ".55";
+        status.textContent = "Public — can appear in the Home feed.";
+    }
+}
+
+async function postRecordedReel(){
+    if(!window.recordedReelFile){
+        alert("No video available.");
+        return;
+    }
+
+    const caption = document.getElementById("recordCaption").value.trim();
+    const tags = document.getElementById("recordTags").value.trim();
+    const privacy = window.recordPrivacy || "public";
+    const button = document.querySelector('#recordReviewPanel button.primary:last-of-type');
+
+    if(button){ button.disabled = true; button.textContent = "⏳ Posting..."; }
+
+    try {
+        const data = new FormData();
+        data.append("video", window.recordedReelFile, window.recordedReelFile.name || "ticktock_camera_reel.webm");
+        data.append("caption", caption);
+        data.append("tags", tags);
+        data.append("privacy", privacy);
+
+        const response = await fetch("/upload", {
+            method: "POST",
+            body: data
+        });
+
+        if(!response.ok){
+            throw new Error("Upload failed");
+        }
+
+        window.location.href = "/upload?posted=1";
+    } catch(error) {
+        console.error(error);
+        alert("Could not post the Reel. Please try again.");
+        if(button){ button.disabled = false; button.textContent = "🚀 Post Reel"; }
+    }
+}
+
+function cancelRecording(){
+    document.getElementById("recordReviewPanel").style.display = "none";
+    window.recordedReelFile = null;
+    document.getElementById("recordCaption").value = "";
+    document.getElementById("recordTags").value = "";
+    document.getElementById("homeVideoPicker").value = "";
+    if(window.homeGalleryPreviewUrl){ URL.revokeObjectURL(window.homeGalleryPreviewUrl); window.homeGalleryPreviewUrl=null; }
+}
+
+/* ==========================================
+   LOCATION
+========================================== */
+
+function allowLocation(){
+
+    if(!navigator.geolocation){
+
+        skipLocation();
+        return;
+
+    }
+
+    navigator.geolocation.getCurrentPosition(
+
+        function(position){
+
+            console.log(
+                "Location permission granted."
+            );
+
+            console.log(
+                position.coords.latitude,
+                position.coords.longitude
+            );
+
+            document.getElementById(
+                "locationBox"
+            ).style.display = "none";
+
+        },
+
+        function(){
+
+            document.getElementById(
+                "locationBox"
+            ).style.display = "none";
+
+        }
+
+    );
+
+}
+
+
+function skipLocation(){
+
+    document.getElementById(
+        "locationBox"
+    ).style.display = "none";
+
+}
+
+
+/* ==========================================
+   PANELS
+========================================== */
+
+function closePanels(){
+
+    document.getElementById(
+        "profilePanel"
+    ).style.display = "none";
+
+    document.getElementById(
+        "friendsPanel"
+    ).style.display = "none";
+
+    document.getElementById(
+        "notificationsPanel"
+    ).style.display = "none";
+
+}
+
+
+function closeComments(){
+
+    document.getElementById(
+        "commentsPanel"
+    ).style.display = "none";
+
+}
+
+
+/* ==========================================
+   PROFILE
+========================================== */
+
+async function openProfile(){
+
+    closePanels();
+
+    document.getElementById(
+        "profilePanel"
+    ).style.display = "block";
+
+    try{
+
+        const response =
+            await fetch("/api/me");
+
+        const data =
+            await response.json();
+
+        if(!data.success) return;
+
+        const user = data.user;
+        window.currentUsername = user.username;
+
+        document.getElementById(
+            "myUsername"
+        ).textContent =
+            "@" +
+            user.username.split("@")[0];
+
+        document.getElementById(
+            "myUid"
+        ).textContent =
+            "UID: " +
+            user.uid;
+
+        document.getElementById(
+            "myBio"
+        ).textContent =
+            user.bio ||
+            "Welcome to my Tick Tock profile 🚀";
+
+        if(user.photo){
+
+            document.getElementById(
+                "myAvatar"
+            ).innerHTML =
+                `<img
+                src="/uploads/${user.photo}"
+                class="avatar"
+                >`;
+
+        }
+
+    }catch(error){
+
+        console.log(error);
+
+    }
+
+}
+
+
+async function openNotifications(){
+    closePanels();
+    document.getElementById("notificationsPanel").style.display="block";
+    await loadNotifications();
+loadWallet();
+    fetch("/api/notifications/read",{method:"POST"}).catch(()=>{});
+    const b=document.getElementById("notificationBadge");
+    b.style.display="none";
+}
+
+async function loadNotifications(){
+    const box=document.getElementById("notificationList");
+    try{
+        const r=await fetch("/api/notifications");
+        const data=await r.json();
+        const list=data.notifications||[];
+        const badge=document.getElementById("notificationBadge");
+        if(data.unread>0){ badge.textContent=data.unread>99?"99+":data.unread; badge.style.display="inline-block"; }
+        if(!list.length){ box.innerHTML='<div style="padding:30px;text-align:center;color:#888">No notifications yet 🔔</div>'; return; }
+        box.innerHTML=list.map(n=>{
+            const uid=n.uid||"";
+            const followBtn=uid ? `<button onclick="notificationFollow('${uid}',this)">➕ Follow</button>` : '';
+            const msgBtn=uid ? `<button onclick="notificationMessage('${uid}','${escapeHTML((n.username||"").split("@")[0])}')">💬 Message</button>` : '';
+            return `<div class="user-card" style="margin:8px 0;display:flex;align-items:center;gap:10px">
+                <div style="font-size:25px">${n.type==='like'?'❤️':n.type==='follow'?'👤':n.type==='message'?'💬':'📨'}</div>
+                <div class="user-info" style="flex:1"><strong>${escapeHTML(n.message)}</strong><small>${escapeHTML(n.created_at||'')}</small></div>
+                ${followBtn}${msgBtn}
+            </div>`;
+        }).join("");
+    }catch(e){ box.innerHTML="Could not load notifications."; }
+}
+
+async function notificationFollow(uid,button){
+    const r=await fetch('/api/follow/'+encodeURIComponent(uid),{method:'POST'});
+    const d=await r.json();
+    if(d.success){ button.textContent='✓ Following'; button.disabled=true; } else alert(d.message||'Could not follow.');
+}
+
+async function notificationMessage(uid,name){
+    const r=await fetch('/api/follow-status/'+encodeURIComponent(uid));
+    const d=await r.json();
+    if(d.mutual){
+        if(typeof openChat === 'function'){ openChat(uid, name || 'User'); }
+        else alert('Open the Messages section to chat.');
+    }else{
+        alert('You can message this person after both of you follow each other.');
+    }
+}
+
+let lastNotificationUnread = 0;
+
+async function pollNotifications(){
+    try{
+        const r=await fetch("/api/notifications");
+        const data=await r.json();
+        const badge=document.getElementById("notificationBadge");
+        if(!badge) return;
+        const unread=Number(data.unread||0);
+        if(unread>0){ badge.textContent=unread>99?"99+":unread; badge.style.display="inline-block"; }
+        else { badge.style.display="none"; }
+        if(unread>lastNotificationUnread && lastNotificationUnread>=0){
+            const newest=(data.notifications||[])[0];
+            if(newest && newest.type==='message' && typeof showNotificationToast==='function'){
+                showNotificationToast('💬 '+(newest.message||'New message'));
+            }
+        }
+        lastNotificationUnread=unread;
+    }catch(e){}
+}
+
+function showNotificationToast(text){
+    let t=document.getElementById('notificationToast');
+    if(!t){
+        t=document.createElement('div'); t.id='notificationToast';
+        t.style.cssText='position:fixed;top:70px;right:15px;z-index:99999;background:#111;color:#fff;padding:12px 16px;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.35);max-width:300px;font-size:14px';
+        document.body.appendChild(t);
+    }
+    t.textContent=text; t.style.display='block';
+    clearTimeout(window.__ttToastTimer); window.__ttToastTimer=setTimeout(()=>t.style.display='none',3500);
+}
+
+setInterval(pollNotifications,10000);
+setTimeout(pollNotifications,1200);
+
+/* ==========================================
+   FRIENDS
+========================================== */
+
+function openFriends(){
+
+    closePanels();
+
+    document.getElementById(
+        "profilePanel"
+    ).style.display = "none";
+
+    document.getElementById(
+        "friendsPanel"
+    ).style.display = "block";
+
+    loadFriendRequests();
+    loadFriends();
+
+}
+
+
+async function searchUser(){
+
+    const uid =
+        document.getElementById(
+            "uidSearch"
+        ).value.trim();
+
+    if(!uid){
+
+        alert("Enter a UID first.");
+        return;
+
+    }
+
+    const box =
+        document.getElementById(
+            "searchResult"
+        );
+
+    box.innerHTML = "Searching...";
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/user/" +
+                encodeURIComponent(uid)
+            );
+
+        const data =
+            await response.json();
+
+        if(!data.success){
+
+            box.innerHTML =
+                `<div class="user-card">
+                ❌ User not found
+                </div>`;
+
+            return;
+
+        }
+
+        const user = data.user;
+
+        let avatar;
+
+        if(user.photo){
+
+            avatar =
+                `<img
+                src="/uploads/${user.photo}"
+                class="user-avatar"
+                >`;
+
+        }else{
+
+            avatar =
+                `<div
+                class="user-avatar"
+                style="
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                font-size:22px;
+                "
+                >👤</div>`;
+
+        }
+
+        box.innerHTML =
+            `<div class="user-card">
+
+                ${avatar}
+
+                <div class="user-info">
+
+                    <strong>
+                        @${user.username.split("@")[0]}
+                    </strong>
+
+                    <small>
+                        ${user.uid}
+                    </small>
+
+                </div>
+
+                <button
+                    onclick="sendFriend('${user.uid}')"
+                >
+                    ➕ Add
+                </button>
+
+            </div>`;
+
+    }catch(error){
+
+        box.innerHTML =
+            "Search failed.";
+
+        console.log(error);
+
+    }
+
+}
+
+
+async function sendFriend(uid){
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/friend-request/" +
+                encodeURIComponent(uid),
+                {
+                    method:"POST"
+                }
+            );
+
+        const data =
+            await response.json();
+
+        alert(data.message);
+
+    }catch(error){
+
+        alert("Something went wrong.");
+
+    }
+
+}
+
+
+/* ==========================================
+   REQUESTS
+========================================== */
+
+async function loadFriendRequests(){
+
+    const box =
+        document.getElementById(
+            "requests"
+        );
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/friend-requests"
+            );
+
+        const requests =
+            await response.json();
+
+        if(!requests.length){
+
+            box.innerHTML =
+                `<div
+                style="
+                color:#777;
+                padding:10px;
+                "
+                >
+                No pending requests.
+                </div>`;
+
+            return;
+
+        }
+
+        box.innerHTML = "";
+
+        requests.forEach(req => {
+
+            let avatar;
+
+            if(req.photo){
+
+                avatar =
+                    `<img
+                    src="/uploads/${req.photo}"
+                    class="user-avatar"
+                    >`;
+
+            }else{
+
+                avatar =
+                    `<div
+                    class="user-avatar"
+                    style="
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    "
+                    >👤</div>`;
+
+            }
+
+            box.innerHTML +=
+                `<div class="user-card">
+
+                    ${avatar}
+
+                    <div class="user-info">
+
+                        <strong>
+                            @${req.username.split("@")[0]}
+                        </strong>
+
+                        <small>
+                            ${req.uid}
+                        </small>
+
+                    </div>
+
+                    <button
+                        class="accept"
+                        onclick="acceptRequest(${req.id})"
+                    >
+                        ✓
+                    </button>
+
+                    <button
+                        class="reject"
+                        onclick="rejectRequest(${req.id})"
+                    >
+                        ✕
+                    </button>
+
+                </div>`;
+
+        });
+
+    }catch(error){
+
+        box.innerHTML =
+            "Could not load requests.";
+
+    }
+
+}
+
+
+async function acceptRequest(id){
+
+    const response =
+        await fetch(
+            "/api/friend-request/" +
+            id +
+            "/accept",
+            {
+                method:"POST"
+            }
+        );
+
+    const data =
+        await response.json();
+
+    alert(data.message);
+
+    loadFriendRequests();
+    loadFriends();
+
+}
+
+
+async function rejectRequest(id){
+
+    await fetch(
+        "/api/friend-request/" +
+        id +
+        "/reject",
+        {
+            method:"POST"
+        }
+    );
+
+    loadFriendRequests();
+
+}
+
+
+/* ==========================================
+   FRIEND LIST
+========================================== */
+
+async function loadFriends(){
+
+    const box =
+        document.getElementById(
+            "friendList"
+        );
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/friends"
+            );
+
+        const friends =
+            await response.json();
+
+        if(!friends.length){
+
+            box.innerHTML =
+                `<div
+                style="
+                color:#777;
+                padding:10px;
+                "
+                >
+                No friends yet.
+                </div>`;
+
+            return;
+
+        }
+
+        box.innerHTML = "";
+
+        friends.forEach(friend => {
+
+            let avatar;
+
+            if(friend.photo){
+
+                avatar =
+                    `<img
+                    src="/uploads/${friend.photo}"
+                    class="user-avatar"
+                    >`;
+
+            }else{
+
+                avatar =
+                    `<div
+                    class="user-avatar"
+                    style="
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    "
+                    >👤</div>`;
+
+            }
+
+            box.innerHTML +=
+                `<div class="user-card">
+
+                    ${avatar}
+
+                    <div class="user-info">
+
+                        <strong>
+                            @${friend.username.split("@")[0]}
+                        </strong>
+
+                        <small>
+                            ${friend.uid}
+                        </small>
+
+                    </div>
+
+                    <button
+                        class="reject"
+                        onclick="
+                        removeFriend('${friend.uid}')
+                        "
+                    >
+                        Remove
+                    </button>
+
+                </div>`;
+
+        });
+
+    }catch(error){
+
+        box.innerHTML =
+            "Could not load friends.";
+
+    }
+
+}
+
+
+async function removeFriend(uid){
+
+    if(!confirm(
+        "Remove this friend?"
+    )) return;
+
+    const response =
+        await fetch(
+            "/api/friend/remove/" +
+            encodeURIComponent(uid),
+            {
+                method:"POST"
+            }
+        );
+
+    const data =
+        await response.json();
+
+    alert(data.message);
+
+    loadFriends();
+
+}
+
+
+/* ==========================================
+   COMMENTS
+========================================== */
+
+async function openComments(videoId){
+
+    currentCommentVideo = videoId;
+
+    document.getElementById(
+        "commentsPanel"
+    ).style.display = "flex";
+
+    await loadComments(videoId);
+
+}
+
+
+async function loadComments(videoId){
+
+    const list =
+        document.getElementById(
+            "commentsList"
+        );
+
+    list.innerHTML =
+        `<div
+        style="
+        text-align:center;
+        color:#777;
+        padding:20px;
+        "
+        >
+        Loading comments...
+        </div>`;
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/comments/" +
+                encodeURIComponent(videoId)
+            );
+
+        const comments =
+            await response.json();
+
+        document.getElementById(
+            "commentsCount"
+        ).textContent =
+            comments.length +
+            (
+                comments.length === 1
+                ? " comment"
+                : " comments"
+            );
+
+        if(!comments.length){
+
+            list.innerHTML =
+                `<div
+                style="
+                text-align:center;
+                color:#777;
+                padding:40px 10px;
+                "
+                >
+                Be the first to comment 💬
+                </div>`;
+
+            return;
+
+        }
+
+        list.innerHTML = "";
+
+        comments.forEach(comment => {
+
+            const item =
+                document.createElement(
+                    "div"
+                );
+
+            item.className =
+                "comment-item";
+
+            item.innerHTML =
+                `<div class="comment-avatar">
+                    👤
+                </div>
+
+                <div class="comment-body">
+
+                    <div class="comment-user">
+                        @${comment.username.split("@")[0]}
+                    </div>
+
+                    <div class="comment-text">
+                        ${escapeHTML(comment.comment)}
+                    </div>
+
+                </div>`;
+
+            list.appendChild(item);
+
+        });
+
+    }catch(error){
+
+        list.innerHTML =
+            "Could not load comments.";
+
+        console.log(error);
+
+    }
+
+}
+
+
+async function addComment(){
+
+    const input =
+        document.getElementById(
+            "commentInput"
+        );
+
+    const text =
+        input.value.trim();
+
+    if(!text) return;
+
+    if(!currentCommentVideo) return;
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/comment/" +
+                encodeURIComponent(
+                    currentCommentVideo
+                ),
+                {
+                    method:"POST",
+                    headers:{
+                        "Content-Type":
+                            "application/json"
+                    },
+                    body:JSON.stringify({
+                        comment:text
+                    })
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if(data.success){
+
+            input.value = "";
+
+            await loadComments(
+                currentCommentVideo
+            );
+
+        }else{
+
+            alert(
+                data.message ||
+                "Comment failed."
+            );
+
+        }
+
+    }catch(error){
+
+        alert("Could not add comment.");
+
+    }
+
+}
+
+
+function escapeHTML(text){
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+    div.textContent = text;
+
+    return div.innerHTML;
+
+}
+
+
+/* ==========================================
+   LIKES
+========================================== */
+
+async function loadLikeStates(videos){
+    try{
+        const ids = videos.map(v => v.id).filter(Boolean);
+        if(!ids.length) return;
+
+        const response = await fetch("/api/like-status?ids=" + encodeURIComponent(ids.join(",")));
+        if(!response.ok) return;
+
+        const states = await response.json();
+        document.querySelectorAll(".action[data-like-video-id]").forEach(button => {
+            const id = button.getAttribute("data-like-video-id");
+            const state = states[id];
+            if(!state) return;
+
+            const circle = button.querySelector(".circle");
+            const label = button.querySelector("small");
+            if(circle) circle.textContent = state.liked ? "💖" : "❤️";
+            if(label) label.textContent = state.count + (state.count === 1 ? " Like" : " Likes");
+        });
+    }catch(error){
+        console.log("Like state loading failed:", error);
+    }
+}
+
+async function likeVideo(button,videoId){
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/like/" +
+                encodeURIComponent(videoId),
+                {
+                    method:"POST"
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if(data.success){
+
+            button.querySelector(
+                ".circle"
+            ).textContent =
+                data.liked
+                ? "💖"
+                : "❤️";
+
+            const label =
+                button.querySelector(
+                    "small"
+                );
+
+            label.textContent =
+                data.count +
+                (
+                    data.count === 1
+                    ? " Like"
+                    : " Likes"
+                );
+
+        }
+
+    }catch(error){
+
+        console.log(error);
+
+    }
+
+}
+
+
+/* ==========================================
+   SHARE
+========================================== */
+
+async function shareVideo(videoId){
+
+    const link =
+        window.location.origin +
+        "/home?video=" +
+        encodeURIComponent(videoId);
+
+    if(navigator.share){
+
+        try{
+
+            await navigator.share({
+                title:"Tick Tock",
+                text:"Check this Reel on Tick Tock!",
+                url:link
+            });
+
+        }catch(error){}
+
+    }else{
+
+        try{
+
+            await navigator.clipboard.writeText(
+                link
+            );
+
+            alert("Link copied! 🔗");
+
+        }catch(error){
+
+            alert(link);
+
+        }
+
+    }
+
+}
+
+
+/* ==========================================
+   SOUND
+========================================== */
+
+function toggleSound(button){
+
+    const reel =
+        button.closest(".reel");
+
+    const video =
+        reel.querySelector("video");
+
+    video.muted =
+        !video.muted;
+
+    button.querySelector(
+        ".circle"
+    ).textContent =
+        video.muted
+        ? "🔇"
+        : "🔊";
+
+}
+
+
+/* ==========================================
+   VIDEO FEED
+========================================== */
+
+async function loadVideos(){
+
+    const feed =
+        document.getElementById(
+            "feed"
+        );
+
+    feed.innerHTML =
+        `<div
+        style="
+        height:100vh;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        "
+        >
+        Loading Tick Tock... 🎬
+        </div>`;
+
+    try{
+
+        const [videoResponse, uploadResponse] =
+            await Promise.all([
+                fetch("/api/recommended-videos", {cache:"no-store"}),
+                fetch("/api/uploads", {cache:"no-store"})
+            ]);
+
+        let data = await videoResponse.json();
+        const uploads = await uploadResponse.json();
+
+        data = [
+            ...uploads,
+            ...data
+        ];
+
+        if(!data.length){
+
+            feed.innerHTML =
+                `<div
+                style="
+                height:100vh;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                "
+                >
+                No videos available 😔
+                </div>`;
+
+            return;
+
+        }
+
+        data.sort(
+            () => Math.random() - .5
+        );
+
+        feed.innerHTML = "";
+
+        window.__tickTockReelIndex = 0;
+        data.forEach(item => {
+            const reelIndex = window.__tickTockReelIndex++;
+            const reel =
+                document.createElement(
+                    "div"
+                );
+
+            reel.className =
+                "reel";
+
+            const creator =
+                item.creator ||
+                "ticktock";
+
+            const title =
+                item.title ||
+                "Indian Reel 🇮🇳";
+
+            reel.innerHTML =
+                `<video
+                    src="${item.url}"
+                    loop
+                    playsinline
+                    preload="${window.__tickTockReelIndex < 2 ? "auto" : "metadata"}"
+                ></video>
+
+                <div class="side">
+
+                    <div
+                        class="action"
+                        data-like-video-id="${escapeHTML(String(item.id))}"
+                        onclick="
+                        likeVideo(this,'${item.id}')
+                        "
+                    >
+                        <div class="circle">
+                            ❤️
+                        </div>
+                        <small>
+                            0 Likes
+                        </small>
+                    </div>
+
+                    <div
+                        class="action"
+                        onclick="
+                        openComments('${item.id}')
+                        "
+                    >
+                        <div class="circle">
+                            💬
+                        </div>
+                        <small>
+                            Comment
+                        </small>
+                    </div>
+
+                    <div
+                        class="action"
+                        onclick="
+                        shareVideo('${item.id}')
+                        "
+                    >
+                        <div class="circle">
+                            ↗️
+                        </div>
+                        <small>
+                            Share
+                        </small>
+                    </div>
+
+                    <div
+                        class="action"
+                        onclick="
+                        reportReel('${item.id}')
+                        "
+                    >
+                        <div class="circle">🚩</div>
+                        <small>Report</small>
+                    </div>
+
+                    <div
+                        class="action"
+                        onclick="
+                        toggleSound(this)
+                        "
+                    >
+                        <div class="circle">
+                            🔊
+                        </div>
+                        <small>
+                            Sound
+                        </small>
+                    </div>
+
+                </div>
+
+                <div class="bottom-info">
+
+                    <div class="creator">
+                        @${escapeHTML(creator)}
+                    </div>
+
+                    <div class="caption">
+                        ${escapeHTML(title)}
+                    </div>
+
+                    <div class="sound">
+                        🎵 Tick Tock
+                    </div>
+
+                </div>`;
+
+            feed.appendChild(reel);
+
+            const reelVideo = reel.querySelector("video");
+            reelVideo.addEventListener("error", () => {
+                console.log("Skipping unavailable video:", item.url);
+                reel.remove();
+                const remaining = document.querySelectorAll(".reel");
+                if (!remaining.length) {
+                    feed.innerHTML = `<div style="height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px">No playable Reels right now 😔<br><button onclick="refreshReels()" style="margin-top:15px;padding:12px 18px;border:0;border-radius:12px;background:#7055ff;color:white">🔄 Try Again</button></div>`;
+                }
+            }, {once:true});
+
+        });
+
+        loadLikeStates(data);
+
+        setupObserver();
+
+        if(soundUnlocked){
+            startCurrentVideoWithSound();
+        }
+
+    }catch(error){
+
+        console.log(error);
+
+        feed.innerHTML =
+            `<div
+            style="
+            padding:40px;
+            "
+            >
+            Reels could not load right now 😔<br><button onclick="refreshReels()" style="margin-top:15px;padding:12px 18px;border:0;border-radius:12px;background:#7055ff;color:white">🔄 Try Again</button>
+            </div>`;
+
+    }
+
+}
+
+
+/* ==========================================
+   AUTOPLAY
+========================================== */
+
+function setupObserver(){
+
+    const observer =
+        new IntersectionObserver(
+            entries => {
+
+                entries.forEach(entry => {
+
+                    const video =
+                        entry.target.querySelector(
+                            "video"
+                        );
+
+                    if(entry.isIntersecting){
+
+                        document
+                            .querySelectorAll(
+                                ".reel video"
+                            )
+                            .forEach(v => {
+
+                                if(v !== video){
+                                    v.pause();
+                                }
+
+                            });
+
+                        video.muted = !soundUnlocked;
+
+                        video.play().catch(
+                            () => {
+
+                                video.muted = true;
+
+                                video.play();
+
+                            }
+                        );
+
+                    }else{
+
+                        video.pause();
+
+                    }
+
+                });
+
+            },
+            {
+                threshold:.65
+            }
+        );
+
+    document
+        .querySelectorAll(".reel")
+        .forEach(reel => {
+
+            observer.observe(reel);
+
+        });
+
+}
+
+
+
+async function showFeedMode(mode){
+ document.getElementById('normalFeedBtn').classList.toggle('active',mode==='normal');
+ document.getElementById('friendsFeedBtn').classList.toggle('active',mode==='friends');
+ const feed=document.getElementById('feed');
+ if(mode==='normal'){ await loadVideos(); return; }
+ feed.innerHTML='<div style="height:100vh;display:flex;align-items:center;justify-content:center">Loading Friends Reels... 👥🎬</div>';
+ try{
+   const r=await fetch('/api/friend-videos'); const result=await r.json();
+   if(!r.ok || !result.success){
+      feed.innerHTML='<div style="height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px">'+escapeHTML(result.message||'Could not load Friends Reels.')+'<br><button onclick="showFeedMode(\'friends\')" style="margin-top:15px;padding:12px 18px;border:0;border-radius:12px;background:#7055ff;color:white">🔄 Try Again</button></div>';return;
+   }
+   const data=result.videos||[];
+   if(!data.length){feed.innerHTML='<div style="height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px">No public Friends Reels yet. Add friends and ask them to post a Reel. 👥</div>';return;}
+   feed.innerHTML='';
+   data.forEach(item=>{
+    const reel=document.createElement('div'); reel.className='reel';
+    const creator=item.creator||'friend';
+    reel.innerHTML=`<video src="${escapeHTML(item.url)}" loop playsinline preload="metadata"></video><div class="side"><div class="action" data-like-video-id="${escapeHTML(String(item.id))}" onclick="likeVideo(this,'${item.id}')"><div class="circle">❤️</div><small>0 Likes</small></div><div class="action" onclick="openComments('${item.id}')"><div class="circle">💬</div><small>Comment</small></div><div class="action" onclick="shareVideo('${item.id}')"><div class="circle">↗️</div><small>Share</small></div><div class="action" onclick="toggleSound(this)"><div class="circle">🔊</div><small>Sound</small></div></div><div class="bottom-info"><div class="creator">@${escapeHTML(creator)}</div><div class="caption">${escapeHTML(item.caption||item.title||'Friends Reel')}</div><div class="sound">🎵 Tick Tock</div></div>`; feed.appendChild(reel);
+   });
+   loadLikeStates(data); setupObserver(); if(soundUnlocked) startCurrentVideoWithSound();
+ }catch(e){feed.innerHTML='<div style="padding:40px">Could not load Friends Reels 😔</div>';}
+}
+
+function copyUid(uid){ navigator.clipboard.writeText(uid).then(()=>alert('UID copied! 📋')).catch(()=>alert(uid)); }
+
+function closeStore(){const p=document.getElementById('storePanel');if(p)p.style.display='none';}
+async function loadWallet(){try{const d=await (await fetch('/api/wallet')).json();if(d.success){document.getElementById('diamondCount').textContent=d.diamonds||0;document.getElementById('storeDiamondCount').textContent=d.diamonds||0;}}catch(e){}}
+function openStore(){closePanels();closeSocial();closeChat();document.getElementById('storePanel').style.display='block';loadWallet();}
+let paymentKind='topup',paymentRupees=0,paymentDiamonds=0;
+function startDiamondPayment(r,d){paymentKind='topup';paymentRupees=r;paymentDiamonds=d;showPaymentQr(r,d,'Diamond top-up');}
+function buyMembership(){paymentKind='membership';paymentRupees=29;paymentDiamonds=29;showPaymentQr(29,29,'Membership + 29 Diamonds');}
+function showPaymentQr(r,d,label){const upiId='harshith934764-2@okaxis';document.getElementById('paymentQr').src='/static/payment_qr.png';document.getElementById('paymentDetails').innerHTML=`Pay <b>₹${r}</b> using this QR<br>UPI ID: <b>${upiId}</b><br>Package: 💎 ${d}<br><span style="color:#aaa">The same QR is used for every amount.</span>`;document.getElementById('paymentBox').style.display='block';}
+async function submitPayment(){const txn=document.getElementById('txnId').value.trim();if(!txn){alert('Enter the UPI transaction ID.');return;}const url=paymentKind==='membership'?'/api/membership-order':'/api/diamond-order';const body=paymentKind==='membership'?{txn_id:txn}:{rupees:paymentRupees,txn_id:txn};const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();alert(d.message||'Submitted');if(d.success){document.getElementById('txnId').value='';document.getElementById('paymentBox').style.display='none';loadWallet();}}
+async function checkPaymentStatus(){const txn=document.getElementById('txnId').value.trim();if(!txn){alert('Enter the UPI transaction ID first.');return;}const r=await fetch('/api/payment-status?txn_id='+encodeURIComponent(txn));const d=await r.json();if(d.success){alert('Payment status: '+d.status.toUpperCase()+'\nOrder #'+d.order_id);}else{alert(d.message||'Payment not found.');}}
+
+/* ==========================================
+   SOCIAL HUB / FOLLOW / MESSAGE / GROUPS
+========================================== */
+function goBack(){
+    closePanels(); closeComments(); closeSocial(); closeChat(); closeStore();
+    const feed=document.getElementById('feed');
+    if(feed){ feed.scrollTo({top:0,behavior:'smooth'}); }
+    if(location.pathname!=='/home'){ location.replace('/home'); }
+}
+
+function closeSocial(){ document.getElementById('socialPanel').style.display='none'; }
+function closeChat(){ document.getElementById('chatPanel').style.display='none'; }
+
+async function openSocial(tab='videos'){
+    closePanels(); closeComments(); closeChat();
+    document.getElementById('socialPanel').style.display='block';
+    ['videos','private','followers','following','find','chats','groups','saved','activity','analytics'].forEach(x=>{let b=document.getElementById('tab-'+x); if(b)b.classList.toggle('active',x===tab)});
+    document.getElementById('socialSearch').style.display=tab==='find'?'flex':'none';
+    const box=document.getElementById('socialContent'); box.innerHTML='Loading...';
+    await loadSocialStats();
+    if(tab==='videos'||tab==='private') return loadMyVideos(tab==='private');
+    if(tab==='followers') return loadPeople('/api/followers','Followers');
+    if(tab==='following') return loadPeople('/api/following','Following');
+    if(tab==='find'){box.innerHTML='<div style="padding:12px;color:#aaa">Search a 10-digit UID above.</div>';return;}
+    if(tab==='chats') return loadChats();
+    if(tab==='groups') return loadGroups();
+    if(tab==='saved') return loadSavedVideos();
+    if(tab==='activity') return loadFriendActivity();
+    if(tab==='analytics') return loadCreatorAnalytics();
+}
+
+async function loadSocialStats(){
+ try{const me=await (await fetch('/api/me')).json(); if(me.success){document.getElementById('myUidSocial').textContent=me.user.uid;}}
+ catch(e){}
+ try{const a=await (await fetch('/api/followers')).json();document.getElementById('followersCount').textContent=Array.isArray(a)?a.length:0;}catch(e){}
+ try{const a=await (await fetch('/api/following')).json();document.getElementById('followingCount').textContent=Array.isArray(a)?a.length:0;}catch(e){}
+}
+
+function personCard(u, actions=''){
+ const avatar=u.photo ? `<img class="user-avatar" src="/uploads/${encodeURIComponent(u.photo)}" onerror="this.outerHTML='<div class="user-avatar" style="display:flex;align-items:center;justify-content:center">👤</div>'">` : `<div class="user-avatar" style="display:flex;align-items:center;justify-content:center">👤</div>`;
+ return `<div class="social-card">${avatar}<div class="info"><strong>@${escapeHTML((u.username||'user').split('@')[0])}</strong><small>UID: ${escapeHTML(u.uid||'')}</small></div>${actions}</div>`;
+}
+
+async function loadPeople(url,title){
+ const box=document.getElementById('socialContent'); const data=await (await fetch(url)).json();
+ if(!data.length){box.innerHTML='<div style="padding:15px;color:#999">No '+title.toLowerCase()+' yet.</div>';return;}
+ box.innerHTML=data.map(u=>personCard(u,`<button onclick="openUserByUid('${u.uid}')">View</button>`)).join('');
+}
+
+async function loadMyVideos(privateOnly){
+ const box=document.getElementById('socialContent'); const data=await (await fetch('/api/my-videos')).json();
+ const list=data.filter(v=>privateOnly ? v.privacy==='private' : v.privacy!=='private');
+ if(!list.length){box.innerHTML='<div style="padding:15px;color:#999">No '+(privateOnly?'private':'public')+' Reels yet. Use ➕ to upload.</div>';return;}
+ box.innerHTML='<div class="video-grid">'+list.map(v=>`<video src="${v.url}" controls playsinline></video>`).join('')+'</div>';
+}
+
+async function socialFindUser(){
+ const uid=document.getElementById('socialUidInput').value.trim(); const box=document.getElementById('socialContent');
+ if(!/^\d{10}$/.test(uid)){box.innerHTML='<div style="padding:12px">Enter exactly 10 digits.</div>';return;}
+ box.innerHTML='Searching...';
+ const r=await fetch('/api/profile/'+encodeURIComponent(uid)); const d=await r.json();
+ if(!d.success){box.innerHTML='<div style="padding:12px">❌ User not found.</div>';return;}
+ renderFoundUser(d.user);
+}
+
+async function openUserByUid(uid){
+ document.getElementById('socialUidInput').value=uid; document.getElementById('socialSearch').style.display='flex'; document.getElementById('socialContent').innerHTML='Searching...';
+ const r=await fetch('/api/profile/'+encodeURIComponent(uid)); const d=await r.json(); if(d.success)renderFoundUser(d.user); else document.getElementById('socialContent').innerHTML='User not found.';
+}
+
+function renderFoundUser(u){
+  const name=(u.username||'user').split('@')[0];
+  const avatar=u.photo ? `<img src="/uploads/${encodeURIComponent(u.photo)}" class="friend-profile-photo" onerror="this.outerHTML='<div class="friend-profile-photo" style="display:flex;align-items:center;justify-content:center;font-size:42px">👤</div>'">` : `<div class="friend-profile-photo" style="display:flex;align-items:center;justify-content:center;font-size:42px">👤</div>`;
+  const last=u.show_last_seen ? (u.last_seen ? `🟢 Last seen: ${escapeHTML(u.last_seen)}` : '🟢 Last seen: Just now') : '🔒 Last seen is private';
+  const videos=u.videos||[];
+  const videoHtml=videos.length ? `<div class="profile-video-grid">${videos.map(v=>`<div class="profile-video-card"><video src="${escapeHTML(v.url)}" playsinline preload="metadata" onclick="openProfileVideo('${v.id}','${escapeHTML(v.url)}','${escapeHTML(v.caption||v.title||'Reel')}')"></video><div class="profile-video-actions"><button onclick="likeProfileVideo(this,'${v.id}')">❤️ ${v.likes_count||0}</button><button onclick="saveProfileVideo(this,'${v.id}')">${v.saved?'🔖':'🔖'} Save</button></div></div>`).join('')}</div>` : `<div style="padding:15px;color:#999">No public Reels yet.</div>`;
+  const sub=u.subscribed ? '👑 Subscribed' : 'Free account';
+  let followText=u.following?'Following':'Follow';
+  let msg=u.mutual?`<button onclick="openChat('${u.uid}','${escapeHTML(u.username)}')">💬 Message</button>`:'';
+  let friend=u.is_friend?'🤝 Friends':'👥 Friend Request';
+  document.getElementById('socialContent').innerHTML=`<div class="social-card profile-full" style="display:block;text-align:center">${avatar}<h3 style="margin-top:10px">@${escapeHTML(name)}</h3><div style="color:#9b8cff;margin-top:4px">UID: <b class="uid-copy" onclick="copyUid('${u.uid}')">${escapeHTML(u.uid)} 📋</b></div><div class="profile-sub-badge">${sub}</div><div style="color:#aaa;margin:8px 0">${escapeHTML(u.bio||'No bio')}</div><div class="last-seen">${last}</div><div class="social-stats"><div class="social-stat" onclick="openProfilePeople('${u.uid}','followers')"><b>${u.followers_count||0}</b><small>Followers</small></div><div class="social-stat" onclick="openProfilePeople('${u.uid}','following')"><b>${u.following_count||0}</b><small>Following</small></div><div class="social-stat"><b>${u.video_count||videos.length}</b><small>Reels</small></div></div><div class="profile-actions"><button onclick="toggleFollow('${u.uid}',${u.following})">${followText}</button><button class="gray" onclick="sendFriend('${u.uid}')">${friend}</button>${msg}</div><div style="text-align:left;margin-top:18px"><h3>🎬 Reels (${u.video_count||videos.length})</h3>${videoHtml}</div></div>`;
+}
+
+function openProfileVideo(id,url,title){
+  document.getElementById('videoViewerTitle').textContent='🎬 '+title;
+  const v=document.getElementById('profileVideoPlayer'); v.src=url; v.currentTime=0; v.play().catch(()=>{});
+  document.getElementById('profileVideoActions').innerHTML=`<button class="primary" style="width:auto;padding:10px 16px" onclick="likeProfileVideo(this,'${id}')">❤️ Like</button><button class="friends" style="border:0;border-radius:12px;padding:10px 16px" onclick="saveProfileVideo(this,'${id}')">🔖 Save</button><button style="border:0;border-radius:12px;padding:10px 16px;background:#292940;color:#fff" onclick="shareToFriend('${id}')">👥 Send to Friend</button><button style="border:0;border-radius:12px;padding:10px 16px;background:#292940;color:#fff" onclick="reportReel('${id}')">🚩 Report</button>`;
+  document.getElementById('videoViewerPanel').style.display='block';
+}
+function closeVideoViewer(){const v=document.getElementById('profileVideoPlayer');v.pause();v.removeAttribute('src');v.load();document.getElementById('videoViewerPanel').style.display='none';}
+async function likeProfileVideo(btn,id){const r=await fetch('/api/like/'+encodeURIComponent(id),{method:'POST'});const d=await r.json();if(d.success){btn.textContent='❤️ '+d.count;}}
+async function saveProfileVideo(btn,id){const r=await fetch('/api/save/'+encodeURIComponent(id),{method:'POST'});const d=await r.json();if(d.success){btn.textContent=d.saved?'🔖 Saved':'🔖 Save';}}
+async function openProfilePeople(uid,type){const r=await fetch('/api/profile/'+encodeURIComponent(uid)+'/'+type);const d=await r.json();const box=document.getElementById('socialContent');if(!Array.isArray(d)||!d.length){box.innerHTML='<div style="padding:15px;color:#999">No '+type+' yet.</div>';return;}box.innerHTML='<button class="gray" onclick="openUserByUid(\''+uid+'\')">← Back to profile</button>'+d.map(u=>personCard(u,`<button onclick="openUserByUid('${u.uid}')">View</button>`)).join('');}
+
+async function toggleFollow(uid,isFollowing){
+ const r=await fetch('/api/'+(isFollowing?'unfollow/':'follow/')+encodeURIComponent(uid),{method:'POST'}); const d=await r.json(); alert(d.message|| (isFollowing?'Unfollowed.':'Followed!')); openUserByUid(uid); loadSocialStats();
+}
+async function sendFriend(uid){const r=await fetch('/api/friend-request/'+encodeURIComponent(uid),{method:'POST'});const d=await r.json();alert(d.message||'Done');}
+
+async function loadChats(){
+ const box=document.getElementById('socialContent'); const data=await (await fetch('/api/chats')).json();
+ if(!data.length){box.innerHTML='<div style="padding:15px;color:#999">No chats yet. Find a UID and message after you both follow each other.</div>';return;}
+ box.innerHTML=data.map(u=>personCard(u,`<button onclick="openChat('${u.uid}','${escapeHTML(u.username)}')">Open${u.unread?` 🔴 ${u.unread}`:''}</button>`)).join('');
+}
+
+let activeChatUid='';
+async function openChat(uid,name){
+ closeSocial(); closePanels(); document.getElementById('chatPanel').style.display='block'; activeChatUid=uid; document.getElementById('chatTitle').textContent='💬 '+name; await loadChatMessages(); document.getElementById('chatInput').focus();
+}
+async function loadChatMessages(){
+ const box=document.getElementById('chatMessages'); const r=await fetch('/api/messages/'+encodeURIComponent(activeChatUid)); const d=await r.json();
+ if(!Array.isArray(d)){box.innerHTML='<div style="padding:15px">'+escapeHTML(d.message||'Messaging unavailable.')+'</div>';return;}
+ box.innerHTML=d.map(m=>`<div class="chat-msg ${m.username===window.currentUsername?'mine':''}"><b>@${escapeHTML((m.username||'').split('@')[0])}</b><div>${escapeHTML(m.message)}</div><small>${escapeHTML(m.created_at||'')}</small></div>`).join(''); box.scrollTop=box.scrollHeight;
+ fetch('/api/messages/'+encodeURIComponent(activeChatUid)+'/read',{method:'POST'}).catch(()=>{});
+}
+async function sendChat(){const input=document.getElementById('chatInput');const text=input.value.trim();if(!text||!activeChatUid)return;const r=await fetch('/api/message/'+encodeURIComponent(activeChatUid),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text})});const d=await r.json();if(!d.success){alert(d.message||'Message failed.');return;}input.value='';loadChatMessages();}
+
+async function loadSavedVideos(){
+ const box=document.getElementById('socialContent'); const data=await (await fetch('/api/saved-videos')).json();
+ if(!data.length){box.innerHTML='<div style="padding:15px;color:#999">No saved Reels yet. 🔖</div>';return;}
+ box.innerHTML='<div class="video-grid">'+data.map(v=>`<div class="profile-video-card"><video src="${escapeHTML(v.url)}" playsinline preload="metadata" onclick="openProfileVideo('${escapeHTML(v.video_id)}','${escapeHTML(v.url)}','${escapeHTML(v.caption||v.title||'Saved Reel')}')"></video><div class="profile-video-actions"><button onclick="saveProfileVideo(this,'${escapeHTML(v.video_id)}')">🔖 Saved</button></div></div>`).join('')+'</div>';
+}
+async function loadFriendActivity(){
+ const box=document.getElementById('socialContent'); const data=await (await fetch('/api/friend-comments')).json();
+ if(!data.length){box.innerHTML='<div style="padding:15px;color:#999">No friend activity yet.</div>';return;}
+ box.innerHTML=data.map(c=>`<div class="social-card"><div class="info"><strong>💬 @${escapeHTML((c.commenter||'friend').split('@')[0])}</strong><small>commented: “${escapeHTML(c.comment)}”</small><small>on @${escapeHTML((c.owner_username||c.creator||'Reel').split('@')[0])}</small></div>${c.url?`<button onclick="openProfileVideo('${escapeHTML(c.video_id)}','${escapeHTML(c.url)}','${escapeHTML(c.title||'Reel')}')">Watch</button>`:''}</div>`).join('');
+}
+function openSearch(){closePanels();closeSocial();closeChat();document.getElementById('searchPanel').style.display='block';document.getElementById('globalSearchInput').focus();}
+function closeSearch(){document.getElementById('searchPanel').style.display='none';}
+async function runGlobalSearch(){const q=document.getElementById('globalSearchInput').value.trim();const box=document.getElementById('globalSearchResults');if(!q){box.innerHTML='<div style="padding:12px;color:#999">Type something to search.</div>';return;}box.innerHTML='Searching...';const d=await (await fetch('/api/search?q='+encodeURIComponent(q))).json();let html='<div class="section">👤 People</div>'+(d.users||[]).map(u=>personCard(u,`<button onclick="closeSearch();openSocial('find');openUserByUid('${u.uid}')">View</button>`)).join('');html+='<div class="section">🎬 Reels</div>'+(d.videos||[]).map(v=>`<div class="social-card"><div class="info"><strong>${escapeHTML(v.caption||v.title||'Reel')}</strong><small>@${escapeHTML(v.creator||'ticktock')}</small></div><button onclick="openProfileVideo('${v.id}','${escapeHTML(v.url)}','${escapeHTML(v.caption||v.title||'Reel')}')">Watch</button></div>`).join('');if(!(d.users||[]).length&&!(d.videos||[]).length)html+='<div style="padding:15px;color:#999">Nothing found.</div>';box.innerHTML=html;}
+
+async function loadGroups(){
+ const box=document.getElementById('socialContent'); const data=await (await fetch('/api/groups')).json();
+ box.innerHTML=`<div style="display:flex;gap:7px;margin-bottom:10px"><input id="newGroupName" placeholder="New group name" style="flex:1;padding:10px;border-radius:10px;background:#11111f;color:#fff;border:1px solid #30304b"><button onclick="createGroup()" style="border:0;border-radius:10px;background:#7055ff;color:#fff;padding:10px">Create</button></div>`;
+ if(!data.length){box.innerHTML+='<div style="padding:12px;color:#999">No groups yet.</div>';return;}
+ box.innerHTML+=data.map(g=>`<div class="social-card"><div class="info"><strong>👨‍👩‍👧 ${escapeHTML(g.name)}</strong><small>Group #${g.id}</small></div><button onclick="openGroup(${g.id},'${escapeHTML(g.name)}')">Open</button></div>`).join('');
+}
+async function createGroup(){const input=document.getElementById('newGroupName');const name=input.value.trim();if(!name)return;const r=await fetch('/api/groups',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});const d=await r.json();if(!d.success){alert(d.message||'Could not create group');return;}loadGroups();}
+
+let activeGroupId=null;
+async function openGroup(id,name){activeGroupId=id;document.getElementById('socialTitle').textContent='👨‍👩‍👧 '+name;document.getElementById('socialSearch').style.display='none';const box=document.getElementById('socialContent');box.innerHTML=`<div style="display:flex;gap:6px;margin-bottom:8px"><input id="groupMemberUid" placeholder="Add member by 10-digit UID" style="flex:1;padding:10px;border-radius:10px;background:#11111f;color:#fff;border:1px solid #30304b"><button onclick="addGroupMember()" style="border:0;border-radius:10px;background:#7055ff;color:#fff;padding:10px">Add</button></div><div id="groupMessages" class="chat-messages" style="height:300px"></div><div class="chat-send"><input id="groupInput" placeholder="Group message..." onkeydown="if(event.key==='Enter')sendGroupMessage()"><button onclick="sendGroupMessage()">➤</button></div>`;loadGroupMessages();}
+async function loadGroupMessages(){const box=document.getElementById('groupMessages');const r=await fetch('/api/groups/'+activeGroupId+'/messages');const d=await r.json();if(!Array.isArray(d)){box.innerHTML=escapeHTML(d.message||'Unavailable');return;}box.innerHTML=d.map(m=>`<div class="chat-msg"><b>@${escapeHTML((m.username||'').split('@')[0])}</b><div>${escapeHTML(m.message)}</div><small>${escapeHTML(m.created_at||'')}</small></div>`).join('');box.scrollTop=box.scrollHeight;}
+async function addGroupMember(){const i=document.getElementById('groupMemberUid');const uid=i.value.trim();if(!/^\d{10}$/.test(uid)){alert('Enter a valid 10-digit UID.');return;}const r=await fetch('/api/groups/'+activeGroupId+'/members',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid})});const d=await r.json();alert(d.message|| (d.success?'Member added.':'Could not add member.'));if(d.success)i.value='';}
+async function sendGroupMessage(){const i=document.getElementById('groupInput');const t=i.value.trim();if(!t)return;const r=await fetch('/api/groups/'+activeGroupId+'/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:t})});const d=await r.json();if(!d.success){alert(d.message||'Failed');return;}i.value='';loadGroupMessages();}
+
+
+
+async function shareToFriend(videoId){
+    document.getElementById('shareFriendPanel').style.display='block';
+    const box=document.getElementById('shareFriendList'); box.innerHTML='Loading friends...';
+    const d=await (await fetch('/api/friends')).json();
+    if(!Array.isArray(d)||!d.length){box.innerHTML='<div style="padding:15px;color:#999">No friends yet. Add a friend first.</div>';return;}
+    box.innerHTML=d.map(u=>`<div class="social-card">${u.photo?`<img class="user-avatar" src="/uploads/${encodeURIComponent(u.photo)}">`:'<div class="user-avatar" style="display:flex;align-items:center;justify-content:center">👤</div>'}<div class="info"><strong>@${escapeHTML((u.username||'friend').split('@')[0])}</strong><small>UID: ${escapeHTML(u.uid||'')}</small></div><button onclick="sendReelToFriend('${escapeHTML(videoId)}','${escapeHTML(u.uid)}')">Send</button></div>`).join('');
+}
+function closeShareFriend(){document.getElementById('shareFriendPanel').style.display='none';}
+async function sendReelToFriend(videoId,uid){const r=await fetch('/api/share-to-friend/'+encodeURIComponent(videoId)+'/'+encodeURIComponent(uid),{method:'POST'});const d=await r.json();alert(d.message||'Done');if(d.success)closeShareFriend();}
+
+/* ==========================================
+   SAFETY / ANALYTICS / WATCH TRACKING
+========================================== */
+let reportVideoId = null;
+function reportReel(videoId){
+    reportVideoId=videoId;
+    document.getElementById('reportReason').value='Spam';
+    document.getElementById('reportDetails').value='';
+    document.getElementById('reportPanel').style.display='block';
+}
+function closeReport(){document.getElementById('reportPanel').style.display='none'; reportVideoId=null;}
+async function submitReelReport(){
+    if(!reportVideoId)return;
+    const r=await fetch('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({video_id:reportVideoId,reason:document.getElementById('reportReason').value,details:document.getElementById('reportDetails').value})});
+    const d=await r.json(); alert(d.message||'Report submitted.'); if(d.success)closeReport();
+}
+async function recordReelView(video, completed=false){
+    if(!video || !video.dataset.viewSent) return;
+    const id=video.dataset.viewId;
+    if(!id)return;
+    const key=id+'_'+Math.floor(video.currentTime/5);
+    if(video.dataset.lastViewKey===key && !completed)return;
+    video.dataset.lastViewKey=key;
+    fetch('/api/view/'+encodeURIComponent(id),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({watched_seconds:Math.floor(video.currentTime),completed:completed})}).catch(()=>{});
+}
+function setupViewTracking(){
+    document.querySelectorAll('.reel video').forEach(v=>{
+        if(v.dataset.trackingBound)return;
+        const reel=v.closest('.reel');
+        const like=reel && reel.querySelector('[data-like-video-id]');
+        if(like){v.dataset.viewId=like.getAttribute('data-like-video-id'); v.dataset.viewSent='1';}
+        v.dataset.trackingBound='1';
+        v.addEventListener('timeupdate',()=>{ if(Math.floor(v.currentTime)%5===0) recordReelView(v,false); });
+        v.addEventListener('ended',()=>recordReelView(v,true));
+    });
+}
+
+async function loadCreatorAnalytics(){
+    const box=document.getElementById('socialContent');
+    box.innerHTML='<div style="padding:20px;text-align:center;color:#aaa">Loading analytics...</div>';
+    const r=await fetch('/api/creator-analytics'); const d=await r.json();
+    if(!d.success){box.innerHTML='<div style="padding:20px;color:#aaa">Analytics unavailable.</div>';return;}
+    const x=d.stats||{};
+    box.innerHTML=`<div class="social-card" style="display:block"><h3>📊 Your Creator Analytics</h3><div class="social-stats" style="margin-top:12px"><div class="social-stat"><b>${x.reels||0}</b><small>Reels</small></div><div class="social-stat"><b>${x.views||0}</b><small>Views</small></div><div class="social-stat"><b>${x.likes||0}</b><small>Likes</small></div><div class="social-stat"><b>${x.comments||0}</b><small>Comments</small></div><div class="social-stat"><b>${x.shares||0}</b><small>Shares</small></div></div></div><div class="section">🔥 Top Reels</div>` + ((d.top||[]).map(v=>`<div class="social-card"><div class="info"><strong>${escapeHTML(v.caption||v.title||'Reel')}</strong><small>👁️ ${v.views||0} views · ❤️ ${v.likes||0} likes</small></div></div>`).join('') || '<div style="padding:12px;color:#999">Post a Reel to see analytics.</div>');
+}
+
+// Make every newly rendered feed video track views.
+const oldSetupObserver = setupObserver;
+setupObserver = function(){ oldSetupObserver(); setupViewTracking(); };
+
+/* ==========================================
+   START
+========================================== */
+
+loadVideos();
+
+loadNotifications();
+setInterval(loadNotifications, 15000);
+
+</script>
+
+</body>
+</html>

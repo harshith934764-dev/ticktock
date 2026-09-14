@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tick Tock - Login</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:#07070c;color:#fff;font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center}
+.box{width:min(430px,92%);background:#151522;padding:28px;border-radius:24px;box-shadow:0 15px 50px #0008}
+h1{margin:0 0 6px;font-size:32px}
+.sub{color:#999;margin-bottom:22px}
+label{display:block;margin-top:12px;color:#ccc;font-size:14px}
+input{width:100%;padding:14px;margin-top:7px;border-radius:12px;border:1px solid #38384d;background:#0d0d16;color:#fff;font-size:16px}
+button{width:100%;padding:14px;margin-top:16px;border:0;border-radius:12px;background:#7055ff;color:#fff;font-weight:bold;font-size:16px}
+.error{background:#2a1420;border:1px solid #74304a;color:#ff9ab7;padding:12px;border-radius:12px;margin:12px 0;line-height:1.4}
+.actions{display:flex;gap:10px;margin-top:10px}
+.actions a{flex:1;text-align:center;padding:12px;border-radius:12px;background:#222234;color:#c9bdff;text-decoration:none}
+.otp{margin-top:18px;padding-top:18px;border-top:1px solid #303044}
+.center{text-align:center;color:#999;margin-top:18px}
+.center a{color:#b7a8ff;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="box">
+<h1>🎵 Tick Tock</h1>
+<div class="sub">Login to continue</div>
+
+{% if success %}<div style="background:#15351f;border:1px solid #2d8a4c;color:#9dffbd;padding:12px;border-radius:12px;margin:12px 0">{{ success }}</div>{% endif %}
+{% if error %}
+<div class="error">{{ error }}</div>
+{% if show_forgot %}
+<div class="actions">
+<a href="/forgot-password">🔑 Reset Password</a>
+<a href="/register">📝 Register</a>
+</div>
+{% elif register_required %}
+<div class="actions">
+<a href="/register">📝 Register</a>
+<a href="/forgot-password">🔑 Forgot Password</a>
+</div>
+{% endif %}
+{% endif %}
+
+{% if otp_required %}
+<div class="otp">
+<p>📩 OTP sent to <b>{{ entered_email }}</b></p>
+<form method="POST" action="/verify-otp">
+<input name="otp" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit OTP" required>
+<button type="submit">Verify OTP</button>
+</form>
+<form method="POST" action="/resend-otp">
+<button type="submit" style="background:#292941">↻ Resend OTP</button>
+</form>
+</div>
+{% else %}
+<form method="POST" action="/login">
+<label>Gmail</label>
+<input name="username" type="email" value="{{ entered_email or '' }}" placeholder="yourname@gmail.com" autocomplete="username" required>
+<label>Password</label>
+<input name="password" type="password" placeholder="Enter password" autocomplete="current-password" required>
+<button type="submit">Login</button>
+</form>
+<div class="center">
+<a href="/forgot-password">Forgot password?</a>
+<br><br>
+Don't have an account? <a href="/register">Register</a>
+</div>
+{% endif %}
+</div>
+</body>
+</html>

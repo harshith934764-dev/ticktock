@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tick Tock — Create Profile</title>
+<style>
+*{box-sizing:border-box}
+body{
+    margin:0; min-height:100vh; font-family:Arial,sans-serif;
+    background:linear-gradient(135deg,#09090b,#17121f,#09090b);
+    color:#fff; display:flex; justify-content:center; align-items:center;
+    padding:20px;
+}
+.card{
+    width:100%; max-width:520px; padding:28px;
+    background:rgba(25,25,30,.92); border:1px solid #333;
+    border-radius:24px; box-shadow:0 20px 60px rgba(0,0,0,.5);
+}
+h1{margin:0 0 8px;text-align:center;font-size:30px}
+.sub{text-align:center;color:#aaa;margin-bottom:24px}
+label{display:block;margin:15px 0 7px;font-weight:bold}
+input,select,textarea{
+    width:100%; padding:13px 14px; border-radius:12px;
+    border:1px solid #444; background:#111216; color:white;
+    outline:none; font-size:15px;
+}
+input:focus,select:focus,textarea:focus{border-color:#fff}
+textarea{resize:vertical;min-height:90px}
+.photo-box{
+    text-align:center;padding:18px;border:1px dashed #555;
+    border-radius:16px;background:#111216;margin-bottom:8px
+}
+.location{
+    padding:15px;border-radius:14px;background:#111216;
+    border:1px solid #333;margin-top:8px
+}
+.location button{
+    width:100%;padding:12px;border:0;border-radius:12px;
+    background:#fff;color:#000;font-weight:bold;cursor:pointer
+}
+#locationStatus{margin-top:10px;color:#aaa;font-size:13px;line-height:1.4}
+.privacy{display:flex;gap:10px;margin-top:8px}
+.privacy label{
+    flex:1;margin:0;padding:13px;border:1px solid #444;
+    border-radius:12px;text-align:center;cursor:pointer;font-weight:normal
+}
+.privacy input{width:auto;margin-right:6px}
+.submit{
+    width:100%;margin-top:24px;padding:15px;border:0;
+    border-radius:14px;background:linear-gradient(90deg,#fff,#ddd);
+    color:#000;font-size:16px;font-weight:bold;cursor:pointer
+}
+.hint{font-size:12px;color:#888;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="card">
+    <h1>✨ Create your profile</h1>
+    <div class="sub">Welcome to Tick Tock! Complete your profile to continue.</div>
+
+    <form method="POST" action="{{ url_for('profile_setup') }}" enctype="multipart/form-data">
+
+        <label>Profile photo <span style="color:#888">(optional)</span></label>
+        <div class="photo-box">
+            <input type="file" name="profile_photo" accept="image/*">
+            <div class="hint">You can skip this and add a photo later.</div>
+        </div>
+
+        <label for="gender">Gender</label>
+        <select id="gender" name="gender" required>
+            <option value="">Select gender</option>
+            <option value="Male" {% if user and user['gender'] == 'Male' %}selected{% endif %}>Male</option>
+            <option value="Female" {% if user and user['gender'] == 'Female' %}selected{% endif %}>Female</option>
+            <option value="Other" {% if user and user['gender'] == 'Other' %}selected{% endif %}>Other</option>
+            <option value="Prefer not to say" {% if user and user['gender'] == 'Prefer not to say' %}selected{% endif %}>Prefer not to say</option>
+        </select>
+
+        <label for="age">Age</label>
+        <input id="age" type="number" name="age" min="16" max="100"
+               value="{{ user['age'] if user and user['age'] else '' }}"
+               placeholder="16–100" required>
+
+        <label for="phone">Phone number</label>
+        <input id="phone" type="tel" name="phone"
+               value="{{ user['phone'] if user and user['phone'] else '' }}"
+               placeholder="Enter your phone number">
+
+        <label for="bio">Bio</label>
+        <textarea id="bio" name="bio" placeholder="Tell people a little about yourself...">{{ user['bio'] if user and user['bio'] else '' }}</textarea>
+
+        <label style="margin-top:18px;display:block;">Last Seen privacy</label>
+        <div class="privacy">
+            <label><input type="radio" name="last_seen_privacy" value="public" {% if not user or not user['last_seen_privacy'] or user['last_seen_privacy'] == 'public' %}checked{% endif %}> 🌍 Public</label>
+            <label><input type="radio" name="last_seen_privacy" value="private" {% if user and user['last_seen_privacy'] == 'private' %}checked{% endif %}> 🔒 Private</label>
+        </div>
+        <small style="display:block;color:#888;margin-top:6px;">Private means only your friends can see your Last Seen.</small>
+
+        <label>Account privacy</label>
+        <div class="privacy">
+            <label>
+                <input type="radio" name="privacy" value="public"
+                    {% if not user or not user['privacy'] or user['privacy'] == 'public' %}checked{% endif %}>
+                🌍 Public
+            </label>
+            <label>
+                <input type="radio" name="privacy" value="private"
+                    {% if user and user['privacy'] == 'private' %}checked{% endif %}>
+                🔒 Private
+            </label>
+        </div>
+
+        <label>Location</label>
+        <div class="location">
+            <button type="button" onclick="getLocation()">📍 Allow location permission</button>
+            <div id="locationStatus">Your location is only sent when you allow the browser permission.</div>
+            <input type="hidden" name="location" id="location">
+            <input type="hidden" name="latitude" id="latitude">
+            <input type="hidden" name="longitude" id="longitude">
+        </div>
+
+        <button class="submit" type="submit">Continue →</button>
+    </form>
+</div>
+
+<script>
+function getLocation(){
+    const status = document.getElementById("locationStatus");
+
+    if (!navigator.geolocation) {
+        status.textContent = "Location is not supported by this browser.";
+        return;
+    }
+
+    status.textContent = "Asking for location permission…";
+
+    navigator.geolocation.getCurrentPosition(
+        function(position){
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+
+            document.getElementById("latitude").value = lat;
+            document.getElementById("longitude").value = lon;
+
+            // Keep a readable placeholder in the location field.
+            document.getElementById("location").value =
+                "Device location (" + lat.toFixed(5) + ", " + lon.toFixed(5) + ")";
+
+            status.textContent = "✅ Location permission granted. Your location will be saved with this profile.";
+        },
+        function(error){
+            if(error.code === 1){
+                status.textContent = "Location permission was denied. You can continue without sharing your location.";
+            } else {
+                status.textContent = "Could not get your location. You can continue without it.";
+            }
+        },
+        {enableHighAccuracy:true, timeout:10000, maximumAge:300000}
+    );
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Tick Tock - Create Profile</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            font-family: Arial, sans-serif;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #ff2d75,
+                    #7b2cff,
+                    #00aaff
+                );
+
+            padding: 25px;
+        }
+
+        .box {
+            width: 520px;
+            max-width: 100%;
+
+            background: white;
+
+            border-radius: 28px;
+
+            padding: 35px;
+
+            box-shadow:
+                0 20px 60px
+                rgba(0,0,0,0.25);
+        }
+
+        .title {
+            text-align: center;
+
+            font-size: 32px;
+
+            font-weight: 800;
+
+            color: #151a42;
+
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            text-align: center;
+
+            color: #777;
+
+            margin-bottom: 25px;
+        }
+
+        .uid {
+            background: #f1f2ff;
+
+            padding: 15px;
+
+            border-radius: 14px;
+
+            text-align: center;
+
+            margin-bottom: 20px;
+
+            color: #151a42;
+
+            font-weight: bold;
+        }
+
+        label {
+            display: block;
+
+            margin-top: 15px;
+
+            margin-bottom: 7px;
+
+            font-weight: bold;
+
+            color: #333;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+
+            padding: 15px;
+
+            border: 1px solid #ddd;
+
+            border-radius: 14px;
+
+            font-size: 16px;
+
+            outline: none;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: #7b2cff;
+        }
+
+        textarea {
+            resize: vertical;
+
+            min-height: 100px;
+        }
+
+        .photo {
+            padding: 12px;
+
+            background: #fafafa;
+        }
+
+        .error {
+            background: #ffe5e5;
+
+            color: #c40000;
+
+            padding: 12px;
+
+            border-radius: 12px;
+
+            margin-bottom: 15px;
+
+            text-align: center;
+        }
+
+        .button {
+            width: 100%;
+
+            margin-top: 25px;
+
+            padding: 17px;
+
+            border: none;
+
+            border-radius: 15px;
+
+            background: #151a42;
+
+            color: white;
+
+            font-size: 18px;
+
+            font-weight: bold;
+
+            cursor: pointer;
+        }
+
+        .button:hover {
+            background: #292f63;
+        }
+
+        .privacy {
+            margin-top: 15px;
+
+            text-align: center;
+
+            color: #888;
+
+            font-size: 13px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="box">
+
+    <div class="title">
+        ⏱️ Create Your Profile
+    </div>
+
+    <div class="subtitle">
+        Complete your profile to enter Tick Tock 🚀
+    </div>
+
+
+    <div class="uid">
+        🆔 Your Tick Tock UID:
+        <br>
+        {{ uid }}
+    </div>
+
+
+    {% if error %}
+    <div class="error">
+        {{ error }}
+    </div>
+    {% endif %}
+
+
+    <form
+        method="POST"
+        action="/profile-setup"
+        enctype="multipart/form-data"
+    >
+
+        <!-- GENDER -->
+
+        <label>
+            Gender
+        </label>
+
+        <select
+            name="gender"
+            required
+        >
+
+            <option value="">
+                Select gender
+            </option>
+
+            <option value="Male">
+                Male
+            </option>
+
+            <option value="Female">
+                Female
+            </option>
+
+            <option value="Other">
+                Other
+            </option>
+
+            <option value="Prefer not to say">
+                Prefer not to say
+            </option>
+
+        </select>
+
+
+        <!-- AGE -->
+
+        <label>
+            Age
+        </label>
+
+        <input
+            type="number"
+            name="age"
+            min="16"
+            max="100"
+            placeholder="Enter your age (16-100)"
+            required
+        >
+
+
+        <!-- PHOTO -->
+
+        <label>
+            Profile Photo / DP
+        </label>
+
+        <input
+            class="photo"
+            type="file"
+            name="photo"
+            accept="image/png,image/jpeg,image/webp"
+            required
+        >
+
+
+        <!-- BIO -->
+
+        <label>
+            Bio
+        </label>
+
+        <textarea
+            name="bio"
+            maxlength="200"
+            placeholder="Tell people about yourself..."
+        ></textarea>
+
+
+        <!-- LOCATION -->
+
+        <label>
+            Location
+        </label>
+
+        <input
+            type="text"
+            name="location"
+            maxlength="100"
+            placeholder="City / State / Country"
+            required
+        >
+
+
+        <button
+            class="button"
+            type="submit"
+        >
+            Complete Profile & Enter Tick Tock 🚀
+        </button>
+
+    </form>
+
+
+    <div class="privacy">
+        🔒 Use your city/state rather than your exact home address.
+    </div>
+
+</div>
+
+</body>
+</html>
