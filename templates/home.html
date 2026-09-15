@@ -768,6 +768,39 @@ body{background:#050609!important}
 @media(max-width:900px){.panel-bg{z-index:3000!important;padding:10px!important}.panel{z-index:3001!important;width:100%!important;max-width:720px!important;max-height:calc(100dvh - 20px)!important;min-height:0!important;padding:20px 16px 96px!important;border-radius:26px!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch}.panel-head{background:#101020!important;top:-1px!important;padding:2px 0 12px!important}.close{z-index:20!important}.profile-card{padding-bottom:20px}.profile-buttons{display:grid!important;grid-template-columns:1fr 1fr!important}.profile-buttons button{min-width:0!important;width:100%!important}.friends-reels-panel{padding-bottom:90px!important}.upload-progress-card{bottom:50%!important;transform:translate(-50%,50%)!important;padding-bottom:24px!important}}
 @media(max-width:430px){.panel{padding-left:13px!important;padding-right:13px!important}.profile-buttons{grid-template-columns:1fr 1fr!important;gap:9px!important}.profile-buttons button{font-size:13px!important;padding:12px 7px!important}.friends-tabs{position:sticky;top:48px;z-index:8;background:#101020;padding:5px 0}.search{flex-wrap:nowrap}.search input{min-width:0}.search button{flex:0 0 auto}.friend-reel-card video{max-height:48vh}}
 </style>
+
+<style id="final-responsive-polish">
+/* FINAL responsive polish: desktop and Android use purpose-built layouts. */
+.icon-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;overflow:visible}
+.top-buttons{align-items:center;justify-content:flex-end}
+#feed{scrollbar-width:none}
+#feed::-webkit-scrollbar{display:none}
+.panel-bg{padding:16px}
+.panel{max-width:720px;width:min(720px,100%);max-height:calc(100dvh - 32px);border-radius:26px!important}
+.panel-head{position:sticky;top:0;z-index:10}
+@media (min-width:901px){
+  .topbar{padding:16px 30px!important;background:linear-gradient(rgba(5,5,9,.88),rgba(5,5,9,.18),transparent)!important}
+  .logo{font-size:28px!important;letter-spacing:-.7px}
+  .top-buttons{gap:8px!important;max-width:none!important;overflow:visible!important}
+  .icon-btn{width:44px!important;height:44px!important;min-width:44px!important}
+  .panel-bg{align-items:center;justify-content:center}
+  .panel{position:relative!important;left:auto!important;bottom:auto!important;transform:none!important;margin:auto;max-height:calc(100dvh - 60px)!important}
+  .comments-panel{left:50%!important;transform:translateX(-50%)!important}
+}
+@media (max-width:900px){
+  .panel-bg{padding:8px!important}
+  .panel{max-height:calc(100dvh - 16px)!important;padding-bottom:118px!important}
+  .panel-head{top:-1px!important}
+  .profile-card{padding-bottom:26px!important}
+  .mobile-nav{padding-bottom:env(safe-area-inset-bottom)!important;height:calc(66px + env(safe-area-inset-bottom))!important}
+}
+@media (max-width:430px){
+  .panel{border-radius:24px!important}
+  .panel-head h2{font-size:22px!important}
+  .profile-buttons{gap:8px!important}
+  .profile-buttons button{min-height:48px!important}
+}
+</style>
 </head>
 
 <body>
@@ -879,7 +912,9 @@ body{background:#050609!important}
         </p>
 
         <button
+            id="enterAppBtn"
             class="primary"
+            type="button"
             onclick="enterApp()"
         >
             🔊 Enter with Sound
@@ -1460,20 +1495,45 @@ document.getElementById("homeVideoPicker").addEventListener("change", function()
 ========================================== */
 
 function enterApp(){
-
+    // Enter button must take the user directly into the Home feed.
+    // Location is optional and must never block the Home screen.
     soundUnlocked = true;
 
-    document.getElementById(
-        "gate"
-    ).style.display = "none";
+    const gate = document.getElementById("gate");
+    if (gate) {
+        gate.style.display = "none";
+        gate.setAttribute("aria-hidden", "true");
+    }
 
-    document.getElementById(
-        "locationBox"
-    ).style.display = "block";
+    const locationBox = document.getElementById("locationBox");
+    if (locationBox) {
+        locationBox.style.display = "none";
+    }
 
+    const feed = document.getElementById("feed");
+    if (feed) {
+        feed.style.display = "block";
+        feed.scrollTop = 0;
+    }
+
+    // Start/load the Home feed immediately after entering.
+    if (typeof loadVideos === "function") {
+        loadVideos();
+    }
     startCurrentVideoWithSound();
-
 }
+
+// Extra click handler makes the Home entry button reliable on Android Chrome
+// and laptop browsers even if inline click handling is affected.
+document.addEventListener("DOMContentLoaded", function(){
+    const enterBtn = document.getElementById("enterAppBtn");
+    if (enterBtn) {
+        enterBtn.addEventListener("click", function(event){
+            event.preventDefault();
+            enterApp();
+        });
+    }
+});
 
 
 /* ==========================================
@@ -1766,7 +1826,7 @@ async function copyMyUid(){
     copyText(uid);
 }
 
-function openProfile(){
+async function openProfile(){
 
     closePanels();
 
@@ -2915,6 +2975,15 @@ function copyText(text){if(!text)return;navigator.clipboard?.writeText(text).the
    V3 FEATURES
 ========================================== */
 function showPanel(id){ closePanels(); const p=document.getElementById(id); if(p){ p.style.display='block'; } }
+
+// Universal panel controls: close by X, backdrop tap, or Escape.
+document.addEventListener('click',function(e){
+  const panel=e.target.closest('.panel-bg');
+  if(panel && e.target===panel){ closePanels(); }
+});
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){ closePanels(); closeComments(); closeCamera?.(); closeCreateReel?.(); }
+});
 function openSearch(){showPanel('searchPanel'); setTimeout(()=>document.getElementById('globalSearchInput')?.focus(),80)}
 async function runGlobalSearch(){const q=(document.getElementById('globalSearchInput')?.value||'').trim();const box=document.getElementById('searchResults');if(!q){box.innerHTML='<div class="v3-muted">Type something to search.</div>';return}box.innerHTML='Searching...';try{const r=await fetch('/api/search?q='+encodeURIComponent(q));const d=await r.json();let html='';if(d.users?.length){html+='<h3 style="margin:8px 0">👤 Users</h3>';d.users.forEach(u=>{html+=`<div class="v3-card v3-row">${genderAvatar(u.gender,u.photo,'creator-avatar')}<div style="flex:1"><b>@${escapeHTML((u.username||'').split('@')[0])}</b><div class="v3-muted">${escapeHTML(u.uid||'')}</div></div><button class="v3-action" onclick="toggleFollow('${escapeHTML(u.uid)}',this)">Follow</button></div>`})}if(d.videos?.length){html+='<h3 style="margin:16px 0 8px">🎬 Videos</h3>';d.videos.forEach(v=>{html+=`<div class="v3-card"><b>${escapeHTML(v.title||'Untitled')}</b><div class="v3-muted">${escapeHTML(v.caption||'')} ${escapeHTML(v.tags||'')}</div><button class="v3-action" style="margin-top:10px" onclick="closePanels();document.getElementById('feed')?.scrollTo(0,0)">Watch feed</button></div>`})}box.innerHTML=html||'<div class="v3-muted">No results found.</div>'}catch(e){box.innerHTML='Search failed. Try again.'}}
 function openNotifications(){showPanel('notificationsPanel');loadNotifications()}

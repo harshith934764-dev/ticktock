@@ -31,12 +31,17 @@ from werkzeug.security import (
 )
 
 from werkzeug.utils import secure_filename
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 
 app = Flask(
     __name__,
     template_folder="templates"
 )
+
+# Render sits behind a reverse proxy. Trust the forwarded HTTPS scheme so
+# OAuth callback URLs are generated as https://... instead of http://....
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 app.secret_key = os.environ.get(
     "SECRET_KEY",
@@ -56,6 +61,16 @@ OTP_LOCK_SECONDS = 5 * 60
 TRUSTED_DEVICE_DAYS = 30
 TRUSTED_COOKIE = "tt_trusted_device"
 FORCE_OTP_COOKIE = "tt_force_otp"
+
+# Google Sign-In (OAuth 2.0)
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "").strip()
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "").strip()
+GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "").strip()
+GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
+
+
 
 
 def generate_otp():
@@ -433,6 +448,7 @@ def _init_sqlite():
         ("display_name", "TEXT"),
         ("birth_date", "TEXT"),
         ("friend_uid", "TEXT"),
+        ("google_id", "TEXT"),
     ]:
         add_column_if_missing(db, "users", c, d)
 
@@ -690,6 +706,7 @@ def _init_postgres():
         ("display_name", "TEXT"),
         ("birth_date", "DATE"),
         ("friend_uid", "TEXT"),
+        ("google_id", "TEXT"),
     ]:
         add_column_if_missing(db, "users", c, d)
 
@@ -772,7 +789,7 @@ def logged_in():
 
 
 def valid_password(password):
-    # New passwords: 8+ characters, uppercase, lowercase and number.
+    # New passwords: 8+ chars with upper/lowercase and a number.
     # Special characters are NOT required. Existing password hashes are untouched.
     if not password or len(password) < 8:
         return False
@@ -957,6 +974,142 @@ def register():
     return redirect(
         url_for("login")
     )
+
+
+# =========================================================
+# GOOGLE SIGN-IN
+# =========================================================
+
+def google_is_configured():
+    return bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
+
+
+def google_redirect_uri():
+    # Set GOOGLE_REDIRECT_URI in Render for an explicit production callback.
+    # Otherwise derive it from the current public request URL.
+    return GOOGLE_REDIRECT_URI or url_for("google_callback", _external=True)
+
+
+@app.route("/auth/google")
+def google_login():
+    if not google_is_configured():
+        return render_template(
+            "login.html",
+            error="Google Login is not configured yet. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in Render Environment Variables."
+        )
+
+    state = secrets.token_urlsafe(32)
+    session["google_oauth_state"] = state
+
+    params = {
+        "client_id": GOOGLE_CLIENT_ID,
+        "redirect_uri": google_redirect_uri(),
+        "response_type": "code",
+        "scope": "openid email profile",
+        "state": state,
+        "access_type": "online",
+        "prompt": "select_account",
+    }
+    from urllib.parse import urlencode
+    return redirect(GOOGLE_AUTH_URL + "?" + urlencode(params))
+
+
+@app.route("/auth/google/callback")
+def google_callback():
+    error = request.args.get("error", "").strip()
+    if error:
+        session.pop("google_oauth_state", None)
+        return render_template("login.html", error="Google Login was cancelled or denied.")
+
+    state = request.args.get("state", "")
+    expected_state = session.pop("google_oauth_state", "")
+    if not state or not expected_state or not hmac.compare_digest(state, expected_state):
+        return render_template("login.html", error="Google Login security check failed. Please try again.")
+
+    code = request.args.get("code", "").strip()
+    if not code:
+        return render_template("login.html", error="Google Login did not return an authorization code. Please try again.")
+
+    if not google_is_configured():
+        return render_template("login.html", error="Google Login is not configured on the server yet.")
+
+    try:
+        token_response = requests.post(
+            GOOGLE_TOKEN_URL,
+            data={
+                "code": code,
+                "client_id": GOOGLE_CLIENT_ID,
+                "client_secret": GOOGLE_CLIENT_SECRET,
+                "redirect_uri": google_redirect_uri(),
+                "grant_type": "authorization_code",
+            },
+            timeout=20,
+        )
+        if not token_response.ok:
+            print("Google token error:", token_response.status_code, token_response.text[:1000])
+            return render_template("login.html", error="Google Login could not be completed. Please try again.")
+
+        token_data = token_response.json()
+        access_token = token_data.get("access_token", "")
+        if not access_token:
+            return render_template("login.html", error="Google Login returned no access token. Please try again.")
+
+        userinfo_response = requests.get(
+            GOOGLE_USERINFO_URL,
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=20,
+        )
+        if not userinfo_response.ok:
+            print("Google userinfo error:", userinfo_response.status_code, userinfo_response.text[:1000])
+            return render_template("login.html", error="Could not read your Google account. Please try again.")
+
+        info = userinfo_response.json()
+        google_id = str(info.get("sub", "")).strip()
+        email = str(info.get("email", "")).strip().lower()
+        email_verified = info.get("email_verified") is True
+        google_name = str(info.get("name", "")).strip()
+
+        if not google_id or not email or not email_verified:
+            return render_template("login.html", error="Google did not provide a verified email address.")
+
+        db = get_db()
+        user = db.execute(
+            "SELECT * FROM users WHERE google_id=? OR lower(username)=? LIMIT 1",
+            (google_id, email),
+        ).fetchone()
+
+        if user:
+            db.execute(
+                "UPDATE users SET google_id=?, email_verified=1 WHERE id=?",
+                (google_id, user["id"]),
+            )
+            db.commit()
+            user = db.execute("SELECT * FROM users WHERE id=?", (user["id"],)).fetchone()
+            db.close()
+        else:
+            uid = create_uid(db)
+            friend_uid = create_friend_uid(db)
+            # Google users can still use password login later after setting a password
+            # through the normal reset-password flow. The random hash is never exposed.
+            random_password_hash = generate_password_hash(secrets.token_urlsafe(32))
+            db.execute(
+                """INSERT INTO users
+                   (username, password, uid, friend_uid, display_name, profile_complete, email_verified, google_id)
+                   VALUES (?, ?, ?, ?, ?, 0, 1, ?)""",
+                (email, random_password_hash, uid, friend_uid, google_name or email.split("@")[0], google_id),
+            )
+            db.commit()
+            user = db.execute("SELECT * FROM users WHERE id=?", (db.execute("SELECT last_insert_rowid() AS id").fetchone()["id"],)).fetchone()
+            db.close()
+
+        _start_user_session(user)
+        token = _issue_trusted_device(user["id"])
+        response = redirect(url_for("home" if user["profile_complete"] else "profile_setup"))
+        return _set_trusted_cookie(response, token)
+
+    except Exception as error:
+        print("Google Login exception:", error)
+        return render_template("login.html", error="Google Login failed. Please try again.")
 
 
 # =========================================================
