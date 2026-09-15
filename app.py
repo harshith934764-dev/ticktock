@@ -21,6 +21,8 @@ import secrets
 import hmac
 import datetime
 import shutil
+from collections import defaultdict, deque
+from urllib.parse import urlparse
 
 from email.message import EmailMessage
 import smtplib
@@ -41,14 +43,93 @@ app = Flask(
 
 # Render sits behind a reverse proxy. Trust the forwarded HTTPS scheme so
 # OAuth callback URLs are generated as https://... instead of http://....
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
-app.secret_key = os.environ.get(
-    "SECRET_KEY",
-    "tick-tock-secret-key"
+SECRET_KEY = os.environ.get("SECRET_KEY", "").strip()
+if not SECRET_KEY:
+    # Never use a predictable production secret. A missing env secret only creates a
+    # per-process key so local development still works; Render should set SECRET_KEY.
+    SECRET_KEY = secrets.token_hex(32)
+    print("WARNING: SECRET_KEY is not set. Set a strong SECRET_KEY in production.")
+app.secret_key = SECRET_KEY
+app.config.update(
+    MAX_CONTENT_LENGTH=80 * 1024 * 1024,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    PERMANENT_SESSION_LIFETIME=datetime.timedelta(days=30),
 )
-# Keep uploads bounded so one request cannot consume excessive server memory/storage.
-app.config["MAX_CONTENT_LENGTH"] = 80 * 1024 * 1024
+
+# Lightweight abuse protection without adding another service/dependency. This is
+# intentionally conservative and is only a first production layer; a reverse-proxy
+# or dedicated rate limiter can be added later as traffic grows.
+_RATE_BUCKETS = defaultdict(deque)
+_RATE_RULES = {
+    "/login": (10, 300),
+    "/register": (5, 3600),
+    "/verify-otp": (8, 600),
+    "/resend-otp": (3, 600),
+    "/forgot-password": (5, 3600),
+    "/resend-reset-otp": (3, 600),
+    "/reset-password": (8, 600),
+    "/upload": (10, 3600),
+}
+
+def _client_ip():
+    return request.remote_addr or "unknown"
+
+def _rate_limited(key, limit, window):
+    now = time.time()
+    bucket = _RATE_BUCKETS[(key, limit, window)]
+    cutoff = now - window
+    while bucket and bucket[0] <= cutoff:
+        bucket.popleft()
+    if len(bucket) >= limit:
+        return True
+    bucket.append(now)
+    # Keep memory bounded if an attacker sprays unique keys.
+    if len(_RATE_BUCKETS) > 5000:
+        for k in list(_RATE_BUCKETS)[:1000]:
+            b = _RATE_BUCKETS[k]
+            while b and b[0] <= now - window:
+                b.popleft()
+            if not b:
+                _RATE_BUCKETS.pop(k, None)
+    return False
+
+@app.before_request
+def production_request_guards():
+    # State-changing browser requests must come from this site. This blocks the
+    # common cross-site form/fetch CSRF attack while preserving normal same-origin
+    # forms and AJAX requests. Webhook endpoints (if added later) are excluded.
+    if request.method in {"POST", "PUT", "PATCH", "DELETE"} and not request.path.startswith("/webhooks/"):
+        origin = request.headers.get("Origin", "").strip().rstrip("/")
+        referer = request.headers.get("Referer", "").strip()
+        expected = request.host_url.rstrip("/")
+        if origin and origin != expected:
+            return jsonify({"success": False, "message": "Security check failed. Please refresh and try again."}), 403 if request.path.startswith("/api/") else 403
+        if not origin and referer:
+            parsed = urlparse(referer)
+            ref_origin = f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+            if ref_origin != expected:
+                return jsonify({"success": False, "message": "Security check failed. Please refresh and try again."}), 403
+
+    rule = _RATE_RULES.get(request.path)
+    if rule and request.method == "POST":
+        limit, window = rule
+        key = (_client_ip(), request.path)
+        if _rate_limited(key, limit, window):
+            return jsonify({"success": False, "message": "Too many requests. Please wait and try again."}), 429 if request.path.startswith("/api/") else 429
+    return None
+
+@app.after_request
+def production_security_headers(response):
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(self)")
+    response.headers.setdefault("Cache-Control", "no-store") if request.path in {"/login", "/register", "/forgot-password", "/reset-password"} else None
+    return response
 
 
 # =========================================================
@@ -569,6 +650,21 @@ def _init_sqlite():
         SELECT users.id FROM users WHERE users.username=videos.creator
     ) WHERE uploader_id IS NULL""")
     db.execute("UPDATE videos SET privacy='public' WHERE privacy IS NULL OR privacy='' ")
+    # Safe indexes: CREATE INDEX IF NOT EXISTS never deletes or changes existing rows.
+    for index_sql in [
+        "CREATE INDEX IF NOT EXISTS idx_users_lower_username ON users(lower(username))",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_friend_uid ON users(friend_uid) WHERE friend_uid IS NOT NULL AND friend_uid != ''",
+        "CREATE INDEX IF NOT EXISTS idx_videos_created ON videos(created_at DESC, id DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_videos_uploader ON videos(uploader_id)",
+        "CREATE INDEX IF NOT EXISTS idx_comments_video ON comments(video_id, created_at DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, is_read, created_at DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_follows_follower ON follows(follower_id)",
+        "CREATE INDEX IF NOT EXISTS idx_follows_following ON follows(following_id)",
+    ]:
+        try:
+            db.execute(index_sql)
+        except Exception as error:
+            print("Index setup warning:", error)
     db.commit()
     db.close()
 
@@ -3182,15 +3278,26 @@ def friend_reels():
 # =========================================================
 
 ALLOWED_VIDEO = {
-
     "mp4",
-
     "webm",
-
     "mov",
-
     "m4v"
 }
+
+
+def _looks_like_video(file_storage, extension):
+    """Small magic-byte check to reject obvious non-video uploads."""
+    try:
+        pos = file_storage.stream.tell()
+        head = file_storage.stream.read(16)
+        file_storage.stream.seek(pos)
+    except Exception:
+        return False
+    if extension.lstrip(".") in {"mp4", "m4v", "mov"}:
+        return len(head) >= 8 and head[4:8] == b"ftyp"
+    if extension.lstrip(".") == "webm":
+        return head.startswith(b"\x1a\x45\xdf\xa3")
+    return False
 
 
 @app.route(
@@ -3230,7 +3337,18 @@ def upload():
         return (
             "Only MP4, WEBM, MOV "
             "and M4V files are allowed."
-        )
+        ), 400
+
+    content_type = (file.mimetype or "").lower()
+    allowed_mimes = {
+        "video/mp4", "video/webm", "video/quicktime",
+        "video/x-m4v", "application/octet-stream"
+    }
+    if content_type and content_type not in allowed_mimes:
+        return "Invalid video file type.", 400
+
+    if not _looks_like_video(file, extension):
+        return "The uploaded file does not look like a valid video.", 400
 
     filename = secure_filename(
         file.filename
@@ -3689,6 +3807,15 @@ def logout():
     return redirect(
         url_for("login")
     )
+
+
+@app.errorhandler(413)
+def request_too_large(error):
+    return jsonify({"success": False, "message": "File is too large. Maximum upload size is 80 MB."}), 413
+
+@app.errorhandler(429)
+def too_many_requests(error):
+    return jsonify({"success": False, "message": "Too many requests. Please wait and try again."}), 429
 
 
 # =========================================================

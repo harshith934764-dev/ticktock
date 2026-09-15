@@ -2726,7 +2726,7 @@ async function loadVideos(force=false){
 
                 reel.innerHTML=`
                     <video
-                        src="${item.url}"
+                        src="${escapeHTML(String(item.url||""))}"
                         loop
                         playsinline
                         muted
@@ -2765,7 +2765,7 @@ async function loadVideos(force=false){
                             ${genderAvatar(item.creator_gender,item.creator_photo,"creator-avatar")}
 
                             <div style="flex:1;min-width:0;">
-                                <div class="creator">@${escapeHTML(creator)}</div>
+                                <div class="creator">@${escapeHTML(String(creator))}</div>
                                 <div class="creator-followers" style="font-size:11px;color:#ddd;">
                                     ${item.creator_uid ? (item.creator_followers||0)+" followers" : "Tick Tock"}
                                 </div>
