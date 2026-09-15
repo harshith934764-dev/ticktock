@@ -504,6 +504,23 @@ def _init_sqlite():
         diamonds INTEGER NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )""")
+    db.execute("""CREATE TABLE IF NOT EXISTS bookmarks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, video_id TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE(user_id, video_id)
+    )""")
+    db.execute("""CREATE TABLE IF NOT EXISTS notifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, actor_id INTEGER,
+        type TEXT NOT NULL, video_id TEXT, message TEXT NOT NULL, is_read INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )""")
+    db.execute("""CREATE TABLE IF NOT EXISTS video_views (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, video_id TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )""")
+    db.execute("""CREATE TABLE IF NOT EXISTS reports (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, reporter_id INTEGER NOT NULL, video_id TEXT,
+        reported_user_id INTEGER, reason TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )""")
     for c, d in [
         ("caption", "TEXT"), ("tags", "TEXT"),
         ("privacy", "TEXT DEFAULT 'public'"), ("uploader_id", "INTEGER"),
@@ -622,6 +639,23 @@ def _init_postgres():
             diamonds BIGINT NOT NULL,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
         )""",
+        """CREATE TABLE IF NOT EXISTS bookmarks (
+            id BIGSERIAL PRIMARY KEY, user_id BIGINT NOT NULL, video_id TEXT NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, UNIQUE(user_id, video_id)
+        )""",
+        """CREATE TABLE IF NOT EXISTS notifications (
+            id BIGSERIAL PRIMARY KEY, user_id BIGINT NOT NULL, actor_id BIGINT, type TEXT NOT NULL,
+            video_id TEXT, message TEXT NOT NULL, is_read INTEGER DEFAULT 0,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+        )""",
+        """CREATE TABLE IF NOT EXISTS video_views (
+            id BIGSERIAL PRIMARY KEY, user_id BIGINT, video_id TEXT NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+        )""",
+        """CREATE TABLE IF NOT EXISTS reports (
+            id BIGSERIAL PRIMARY KEY, reporter_id BIGINT NOT NULL, video_id TEXT,
+            reported_user_id BIGINT, reason TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+        )""",
     ]
     for statement in statements:
         db.execute(statement)
@@ -653,6 +687,10 @@ def _init_postgres():
         "CREATE INDEX IF NOT EXISTS idx_diamond_tx_user ON diamond_transactions (user_id, id DESC)",
         "CREATE INDEX IF NOT EXISTS idx_gifts_receiver ON gifts (receiver_id, id DESC)",
         "CREATE INDEX IF NOT EXISTS idx_gifts_sender ON gifts (sender_id, id DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_bookmarks_user ON bookmarks (user_id, id DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications (user_id, is_read, id DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_views_video ON video_views (video_id)",
+        "CREATE INDEX IF NOT EXISTS idx_reports_created ON reports (created_at DESC)",
     ]
     for statement in indexes:
         db.execute(statement)
@@ -2310,6 +2348,17 @@ def discover_users():
     return jsonify([dict(row) for row in rows])
 
 
+# =========================================================
+# V3 SOCIAL HELPERS
+# =========================================================
+
+def add_notification(db, user_id, actor_id, ntype, message, video_id=None):
+    if user_id and actor_id and int(user_id) == int(actor_id):
+        return
+    db.execute("INSERT INTO notifications (user_id, actor_id, type, video_id, message) VALUES (?, ?, ?, ?, ?)",
+               (user_id, actor_id, ntype, video_id, message))
+
+
 @app.route("/api/follow/<uid>", methods=["POST"])
 def follow_user(uid):
     if not logged_in():
@@ -2384,6 +2433,8 @@ def follow_user(uid):
             (me, target_id)
         )
         following = True
+        target_user = db.execute("SELECT username FROM users WHERE id=?", (target_id,)).fetchone()
+        add_notification(db, target_id, me, "follow", f"@{session.get('username','user')} started following you")
 
     count = db.execute(
         """
@@ -2445,6 +2496,72 @@ def api_following():
     db.close()
     return jsonify([dict(row) for row in rows])
 
+
+# =========================================================
+# V3 FEATURES: SEARCH / SAVED / NOTIFICATIONS / VIEWS / REPORTS
+# =========================================================
+
+@app.route("/api/search")
+def api_search():
+    q = str(request.args.get("q", "")).strip()[:80]
+    if not q:
+        return jsonify({"users": [], "videos": []})
+    db = get_db(); like = f"%{q}%"
+    users = db.execute("SELECT id, username, uid, gender, photo, bio FROM users WHERE lower(username) LIKE lower(?) OR lower(uid) LIKE lower(?) ORDER BY id DESC LIMIT 20", (like, like)).fetchall()
+    videos = db.execute("SELECT id, title, url, creator, source, caption, tags, uploader_id FROM videos WHERE privacy='public' AND (lower(title) LIKE lower(?) OR lower(COALESCE(caption,'')) LIKE lower(?) OR lower(COALESCE(tags,'')) LIKE lower(?)) ORDER BY created_at DESC LIMIT 20", (like,like,like)).fetchall()
+    db.close()
+    return jsonify({"users":[dict(x) for x in users],"videos":[dict(x) for x in videos]})
+
+@app.route("/api/bookmark/<video_id>", methods=["POST"])
+def bookmark_video(video_id):
+    if not logged_in(): return jsonify({"success":False,"login_required":True}),401
+    db=get_db(); row=db.execute("SELECT id FROM bookmarks WHERE user_id=? AND video_id=?",(session["user_id"],video_id)).fetchone()
+    if row:
+        db.execute("DELETE FROM bookmarks WHERE id=?",(row["id"],)); saved=False
+    else:
+        db.execute("INSERT INTO bookmarks (user_id,video_id) VALUES (?,?)",(session["user_id"],video_id)); saved=True
+    db.commit(); db.close(); return jsonify({"success":True,"saved":saved})
+
+@app.route("/api/bookmarks")
+def api_bookmarks():
+    if not logged_in(): return jsonify({"success":False}),401
+    db=get_db(); rows=db.execute("SELECT b.video_id,b.created_at,v.title,v.url,v.creator,v.caption,v.tags FROM bookmarks b LEFT JOIN videos v ON CAST(v.id AS TEXT)=b.video_id WHERE b.user_id=? ORDER BY b.id DESC LIMIT 100",(session["user_id"],)).fetchall(); db.close()
+    return jsonify([dict(x) for x in rows])
+
+@app.route("/api/notifications")
+def api_notifications():
+    if not logged_in(): return jsonify({"success":False}),401
+    db=get_db(); rows=db.execute("SELECT id,type,message,video_id,is_read,created_at FROM notifications WHERE user_id=? ORDER BY id DESC LIMIT 50",(session["user_id"],)).fetchall(); unread=db.execute("SELECT COUNT(*) AS n FROM notifications WHERE user_id=? AND is_read=0",(session["user_id"],)).fetchone()["n"]; db.close()
+    return jsonify({"notifications":[dict(x) for x in rows],"unread":int(unread)})
+
+@app.route("/api/notifications/read", methods=["POST"])
+def read_notifications():
+    if not logged_in(): return jsonify({"success":False}),401
+    db=get_db(); db.execute("UPDATE notifications SET is_read=1 WHERE user_id=?",(session["user_id"],)); db.commit(); db.close(); return jsonify({"success":True})
+
+@app.route("/api/view/<video_id>", methods=["POST"])
+def video_view(video_id):
+    db=get_db(); uid=session.get("user_id")
+    db.execute("INSERT INTO video_views (user_id,video_id) VALUES (?,?)",(uid,video_id)); db.commit(); n=db.execute("SELECT COUNT(*) AS n FROM video_views WHERE video_id=?",(video_id,)).fetchone()["n"]; db.close(); return jsonify({"success":True,"views":int(n)})
+
+@app.route("/api/report", methods=["POST"])
+def report_content():
+    if not logged_in(): return jsonify({"success":False,"login_required":True}),401
+    data=request.get_json(silent=True) or {}; video_id=str(data.get("video_id","")).strip() or None; uid=str(data.get("uid","")).strip() or None; reason=str(data.get("reason","Other")).strip()[:100]
+    if reason not in {"Spam","Harassment","Nudity","Violence","Copyright","Other"}: reason="Other"
+    db=get_db(); target=db.execute("SELECT id FROM users WHERE uid=?",(uid,)).fetchone() if uid else None
+    db.execute("INSERT INTO reports (reporter_id,video_id,reported_user_id,reason) VALUES (?,?,?,?)",(session["user_id"],video_id,target["id"] if target else None,reason)); db.commit(); db.close(); return jsonify({"success":True,"message":"Report received. Thank you."})
+
+@app.route("/api/creator-stats")
+def creator_stats():
+    if not logged_in(): return jsonify({"success":False}),401
+    db=get_db(); uid=session["user_id"]
+    followers=db.execute("SELECT COUNT(*) AS n FROM follows WHERE following_id=?",(uid,)).fetchone()["n"]
+    following=db.execute("SELECT COUNT(*) AS n FROM follows WHERE follower_id=?",(uid,)).fetchone()["n"]
+    videos=db.execute("SELECT COUNT(*) AS n FROM videos WHERE uploader_id=?",(uid,)).fetchone()["n"]
+    gifts=db.execute("SELECT COALESCE(SUM(diamonds),0) AS n FROM gifts WHERE receiver_id=?",(uid,)).fetchone()["n"]
+    views=db.execute("SELECT COUNT(*) AS n FROM video_views vv JOIN videos v ON CAST(v.id AS TEXT)=vv.video_id WHERE v.uploader_id=?",(uid,)).fetchone()["n"]
+    db.close(); return jsonify({"success":True,"followers":int(followers),"following":int(following),"videos":int(videos),"gift_diamonds":int(gifts or 0),"views":int(views)})
 
 # =========================================================
 # PIXABAY
@@ -2764,6 +2881,11 @@ def like_video(video_id):
         )
     ).fetchone()["total"]
 
+    if liked:
+        owner = db.execute("SELECT uploader_id, creator FROM videos WHERE CAST(id AS TEXT)=? OR url=?", (video_id, video_id)).fetchone()
+        if owner and owner["uploader_id"]:
+            add_notification(db, owner["uploader_id"], session["user_id"], "like", f"@{session.get('username','user')} liked your video", video_id)
+
     db.commit()
 
     db.close()
@@ -2828,6 +2950,10 @@ def add_comment(video_id):
             comment
         )
     )
+
+    owner = db.execute("SELECT uploader_id FROM videos WHERE CAST(id AS TEXT)=? OR url=?", (video_id, video_id)).fetchone()
+    if owner and owner["uploader_id"]:
+        add_notification(db, owner["uploader_id"], session["user_id"], "comment", f"@{session.get('username','user')} commented on your video", video_id)
 
     db.commit()
 

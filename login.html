@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tick Tock — Login</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at top,#24134b,#08080d 55%);color:#fff;font-family:Arial,sans-serif;display:grid;place-items:center;padding:20px}.card{width:min(430px,100%);padding:30px;border:1px solid #ffffff18;border-radius:26px;background:#111119e8;box-shadow:0 25px 80px #0008;backdrop-filter:blur(18px)}h1{text-align:center;margin:0 0 8px;font-size:34px}p{text-align:center;color:#aaa;margin:8px 0 22px}.brand{background:linear-gradient(90deg,#ff2d8d,#7957ff,#00d9ff);-webkit-background-clip:text;color:transparent}input{width:100%;padding:15px 16px;margin:7px 0;border:1px solid #ffffff16;border-radius:14px;background:#09090f;color:#fff;outline:none}input:focus{border-color:#7957ff;box-shadow:0 0 0 3px #7957ff22}button{width:100%;padding:15px;border:0;border-radius:14px;margin-top:10px;font-weight:800;cursor:pointer;background:linear-gradient(90deg,#ff2d8d,#7957ff);color:#fff}button.secondary{background:#222230}.links{display:flex;justify-content:space-between;gap:10px;margin-top:15px}.links a{color:#bbb;text-decoration:none;font-size:14px}.links a:hover{color:#fff}.error{padding:12px;border-radius:12px;background:#3a1518;color:#ffbaba;margin-bottom:12px}.ok{padding:12px;border-radius:12px;background:#153a24;color:#baffd0;margin-bottom:12px}.otpbox{margin-top:8px}.small{text-align:center;color:#777;font-size:12px;margin-top:15px}
+</style></head><body><main class="card"><h1>🎵 <span class="brand">Tick Tock</span></h1>
+<p>{% if otp_required %}Verify your email to finish signing in.{% else %}Welcome back. Sign in smoothly.{% endif %}</p>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}{% if otp_message %}<div class="ok">{{ otp_message }}</div>{% endif %}
+{% if otp_required %}
+<form method="POST" action="{{ url_for('verify_otp') }}"><input class="otpbox" name="otp" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="6-digit OTP" required><button type="submit">Verify & Continue</button></form>
+<form method="POST" action="{{ url_for('resend_otp') }}"><button class="secondary" type="submit">Resend OTP</button></form>
+<div class="links"><a href="{{ url_for('login') }}">← Start over</a><a href="{{ url_for('forgot_password') }}">Reset password</a></div>
+{% else %}
+<form method="POST"><input type="email" name="username" value="{{ entered_email|default('') }}" placeholder="Gmail address" autocomplete="username" required><input type="password" name="password" placeholder="Password" autocomplete="current-password" required><button type="submit">Log In</button></form>
+<div class="links"><a href="{{ url_for('forgot_password') }}">Forgot password?</a><a href="{{ url_for('register') }}">Create account</a></div>
+{% endif %}
+<div class="small">First login on a device uses email verification. Future logins on that device won't ask for OTP again.</div>
+</main></body></html>
