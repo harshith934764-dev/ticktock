@@ -1,8 +1,0 @@
-__pycache__/
-*.py[cod]
-.env
-.env.*
-ticktock.db
-ticktock.db-*
-uploads/
-*.log
