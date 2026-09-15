@@ -1,2 +1,0 @@
-# Add this line to your existing requirements.txt if it is not already present
-requests
