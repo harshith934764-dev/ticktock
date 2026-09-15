@@ -10,3 +10,7 @@ This build is prepared to use **Supabase PostgreSQL** when the Render environmen
 5. Because the old SQLite data is intentionally being left behind, the new Supabase database starts clean.
 
 Existing application features and Google Sign-In are preserved.
+
+
+## Supabase Storage
+Create public buckets named `videos` and `avatars`. Add `SUPABASE_SERVICE_ROLE_KEY` in Render. `SUPABASE_URL` is optional when DATABASE_URL uses a normal Supabase pooler username because the app can derive the project URL. Never expose the service-role key to the browser or commit it to GitHub.

@@ -401,21 +401,26 @@ if not SUPABASE_URL and DATABASE_URL:
             SUPABASE_URL = "https://" + _db_user.split(".", 1)[1] + ".supabase.co"
     except Exception:
         pass
-SUPABASE_STORAGE_BUCKET = os.environ.get("SUPABASE_STORAGE_BUCKET", "ticktock-media").strip() or "ticktock-media"
+SUPABASE_VIDEO_BUCKET = os.environ.get("SUPABASE_VIDEO_BUCKET", "videos").strip() or "videos"
+SUPABASE_AVATAR_BUCKET = os.environ.get("SUPABASE_AVATAR_BUCKET", "avatars").strip() or "avatars"
 
 def storage_configured():
     return bool(SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)
 
-def storage_object_url(path):
-    return f"{SUPABASE_URL}/storage/v1/object/public/{quote(SUPABASE_STORAGE_BUCKET, safe='')}/{quote(path, safe='/')}"
+def storage_bucket_for_path(path):
+    return SUPABASE_AVATAR_BUCKET if str(path).startswith("profiles/") else SUPABASE_VIDEO_BUCKET
 
-def ensure_storage_bucket():
+def storage_object_url(path):
+    bucket = storage_bucket_for_path(path)
+    return f"{SUPABASE_URL}/storage/v1/object/public/{quote(bucket, safe='')}/{quote(path, safe='/')}"
+
+def ensure_storage_bucket(bucket):
     if not storage_configured():
         print("Tick Tock Storage: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not configured yet.")
         return False
     headers = {"Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}", "apikey": SUPABASE_SERVICE_ROLE_KEY}
     try:
-        check = requests.get(f"{SUPABASE_URL}/storage/v1/bucket/{quote(SUPABASE_STORAGE_BUCKET, safe='')}", headers=headers, timeout=10)
+        check = requests.get(f"{SUPABASE_URL}/storage/v1/bucket/{quote(bucket, safe='')}", headers=headers, timeout=10)
         if check.status_code == 200:
             return True
         if check.status_code != 404:
@@ -424,11 +429,11 @@ def ensure_storage_bucket():
         create = requests.post(
             f"{SUPABASE_URL}/storage/v1/bucket",
             headers={**headers, "Content-Type": "application/json"},
-            json={"id": SUPABASE_STORAGE_BUCKET, "name": SUPABASE_STORAGE_BUCKET, "public": True},
+            json={"id": bucket, "name": bucket, "public": True},
             timeout=15,
         )
         if create.status_code in (200, 201, 409):
-            print("Tick Tock Storage bucket ready:", SUPABASE_STORAGE_BUCKET)
+            print("Tick Tock Storage bucket ready:", bucket)
             return True
         print("Tick Tock Storage bucket creation failed:", create.status_code, create.text[:500])
         return False
@@ -436,9 +441,15 @@ def ensure_storage_bucket():
         print("Tick Tock Storage setup warning:", error)
         return False
 
+def ensure_storage_buckets():
+    return ensure_storage_bucket(SUPABASE_VIDEO_BUCKET) and ensure_storage_bucket(SUPABASE_AVATAR_BUCKET)
+
 def upload_to_storage(file_storage, path, content_type):
     if not storage_configured():
         raise RuntimeError("Cloud media storage is not configured. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Render.")
+    bucket = storage_bucket_for_path(path)
+    if not ensure_storage_bucket(bucket):
+        raise RuntimeError(f"Supabase Storage bucket '{bucket}' is not ready.")
     file_storage.stream.seek(0)
     headers = {
         "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
@@ -447,7 +458,7 @@ def upload_to_storage(file_storage, path, content_type):
         "x-upsert": "true",
     }
     response = requests.post(
-        f"{SUPABASE_URL}/storage/v1/object/{quote(SUPABASE_STORAGE_BUCKET, safe='')}/{quote(path, safe='/')}",
+        f"{SUPABASE_URL}/storage/v1/object/{quote(bucket, safe='')}/{quote(path, safe='/')}",
         headers=headers,
         data=file_storage.stream,
         timeout=180,
@@ -459,9 +470,10 @@ def upload_to_storage(file_storage, path, content_type):
 def delete_storage_object(path):
     if not storage_configured() or not path:
         return
+    bucket = storage_bucket_for_path(path)
     try:
         requests.delete(
-            f"{SUPABASE_URL}/storage/v1/object/{quote(SUPABASE_STORAGE_BUCKET, safe='')}",
+            f"{SUPABASE_URL}/storage/v1/object/{quote(bucket, safe='')}",
             headers={
                 "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
                 "apikey": SUPABASE_SERVICE_ROLE_KEY,
