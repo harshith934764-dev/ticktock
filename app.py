@@ -21,6 +21,8 @@ import secrets
 import hmac
 import datetime
 import shutil
+import uuid
+from urllib.parse import quote
 from collections import defaultdict, deque
 from urllib.parse import urlparse
 
@@ -384,7 +386,92 @@ UPLOAD_FOLDER = os.path.join(DATA_DIR, "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-app.config["MAX_CONTENT_LENGTH"] = 80 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
+
+# Supabase Storage keeps videos/profile photos online across Render restarts.
+# Service-role credentials are read only from Render Environment Variables.
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+if not SUPABASE_URL and DATABASE_URL:
+    # Supabase pooler usernames normally look like postgres.<project-ref>.
+    # This avoids making the public project URL another required setting.
+    try:
+        _db_user = urlparse(DATABASE_URL).username or ""
+        if _db_user.startswith("postgres."):
+            SUPABASE_URL = "https://" + _db_user.split(".", 1)[1] + ".supabase.co"
+    except Exception:
+        pass
+SUPABASE_STORAGE_BUCKET = os.environ.get("SUPABASE_STORAGE_BUCKET", "ticktock-media").strip() or "ticktock-media"
+
+def storage_configured():
+    return bool(SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)
+
+def storage_object_url(path):
+    return f"{SUPABASE_URL}/storage/v1/object/public/{quote(SUPABASE_STORAGE_BUCKET, safe='')}/{quote(path, safe='/')}"
+
+def ensure_storage_bucket():
+    if not storage_configured():
+        print("Tick Tock Storage: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not configured yet.")
+        return False
+    headers = {"Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}", "apikey": SUPABASE_SERVICE_ROLE_KEY}
+    try:
+        check = requests.get(f"{SUPABASE_URL}/storage/v1/bucket/{quote(SUPABASE_STORAGE_BUCKET, safe='')}", headers=headers, timeout=10)
+        if check.status_code == 200:
+            return True
+        if check.status_code != 404:
+            print("Tick Tock Storage bucket check failed:", check.status_code, check.text[:300])
+            return False
+        create = requests.post(
+            f"{SUPABASE_URL}/storage/v1/bucket",
+            headers={**headers, "Content-Type": "application/json"},
+            json={"id": SUPABASE_STORAGE_BUCKET, "name": SUPABASE_STORAGE_BUCKET, "public": True},
+            timeout=15,
+        )
+        if create.status_code in (200, 201, 409):
+            print("Tick Tock Storage bucket ready:", SUPABASE_STORAGE_BUCKET)
+            return True
+        print("Tick Tock Storage bucket creation failed:", create.status_code, create.text[:500])
+        return False
+    except Exception as error:
+        print("Tick Tock Storage setup warning:", error)
+        return False
+
+def upload_to_storage(file_storage, path, content_type):
+    if not storage_configured():
+        raise RuntimeError("Cloud media storage is not configured. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Render.")
+    file_storage.stream.seek(0)
+    headers = {
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Content-Type": content_type or "application/octet-stream",
+        "x-upsert": "true",
+    }
+    response = requests.post(
+        f"{SUPABASE_URL}/storage/v1/object/{quote(SUPABASE_STORAGE_BUCKET, safe='')}/{quote(path, safe='/')}",
+        headers=headers,
+        data=file_storage.stream,
+        timeout=180,
+    )
+    if response.status_code not in (200, 201):
+        raise RuntimeError(f"Storage upload failed ({response.status_code}).")
+    return storage_object_url(path)
+
+def delete_storage_object(path):
+    if not storage_configured() or not path:
+        return
+    try:
+        requests.delete(
+            f"{SUPABASE_URL}/storage/v1/object/{quote(SUPABASE_STORAGE_BUCKET, safe='')}",
+            headers={
+                "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+                "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                "Content-Type": "application/json",
+            },
+            json={"prefixes": [path]},
+            timeout=15,
+        )
+    except Exception as error:
+        print("Storage delete warning:", error)
 
 _pg_pool = None
 
@@ -872,6 +959,7 @@ def init_db():
 
 migrate_legacy_sqlite_if_needed()
 init_db()
+ensure_storage_bucket()
 
 
 # =========================================================
@@ -1623,8 +1711,19 @@ def profile_setup():
         if extension not in allowed:
             db.close()
             return render_template("profile.html", user=dict(current), uid=current["uid"], error="Use JPG, PNG or WEBP for your profile photo.")
-        photo_filename = f"profile_{session['user_id']}{extension}"
-        photo.save(os.path.join(UPLOAD_FOLDER, secure_filename(photo_filename)))
+        photo.stream.seek(0, os.SEEK_END)
+        photo_size = photo.stream.tell()
+        photo.stream.seek(0)
+        if photo_size > 5 * 1024 * 1024:
+            db.close()
+            return render_template("profile.html", user=dict(current), uid=current["uid"], error="Profile photo must be 5 MB or smaller.")
+        photo_path = f"profiles/{session['user_id']}{extension}"
+        try:
+            photo_url = upload_to_storage(photo, photo_path, photo.mimetype or "image/jpeg")
+        except Exception as error:
+            db.close()
+            return render_template("profile.html", user=dict(current), uid=current["uid"], error=str(error))
+        photo_filename = photo_url
 
     if photo_filename:
         db.execute("""UPDATE users SET display_name=?, gender=?, birth_date=?, age=?, photo=?, bio=?, location=?, profile_complete=1 WHERE id=?""",
@@ -1687,6 +1786,22 @@ def api_me():
     })
 
 
+@app.route("/api/me/uploads")
+def api_my_uploads():
+    if not logged_in():
+        return jsonify({"success": False, "login_required": True}), 401
+    db = get_db()
+    rows = db.execute("""
+        SELECT id, title, url, creator, caption, tags, privacy, created_at
+        FROM videos
+        WHERE uploader_id=?
+        ORDER BY created_at DESC NULLS LAST, id DESC
+        LIMIT 60
+    """, (session["user_id"],)).fetchall()
+    db.close()
+    return jsonify({"success": True, "videos": [dict(r) for r in rows]})
+
+
 # =========================================================
 # USER BY UID
 # =========================================================
@@ -1726,18 +1841,36 @@ def find_user(uid):
         )
     ).fetchone()
 
-    db.close()
-
     if not user:
 
+        db.close()
         return jsonify({
             "success": False,
             "message": "User not found."
         }), 404
 
+    followers = db.execute("SELECT COUNT(*) AS n FROM follows WHERE following_id=?", (user["id"],)).fetchone()["n"]
+    following = db.execute("SELECT COUNT(*) AS n FROM follows WHERE follower_id=?", (user["id"],)).fetchone()["n"]
+    is_following = db.execute("SELECT 1 FROM follows WHERE follower_id=? AND following_id=?", (session["user_id"], user["id"])).fetchone()
+    videos = db.execute("""
+        SELECT id, title, url, creator, caption, tags, created_at
+        FROM videos
+        WHERE uploader_id=? AND (privacy='public' OR privacy IS NULL)
+        ORDER BY created_at DESC NULLS LAST, id DESC
+        LIMIT 60
+    """, (user["id"],)).fetchall()
+    db.close()
+
+    profile = dict(user)
+    profile.update({
+        "followers_count": int(followers or 0),
+        "following_count": int(following or 0),
+        "is_following": bool(is_following),
+        "videos": [dict(v) for v in videos],
+    })
     return jsonify({
         "success": True,
-        "user": dict(user)
+        "user": profile
     })
 
 
@@ -2980,7 +3113,7 @@ def api_videos():
     )
 
 
-@app.route("/api/refresh")
+@app.route("/api/refresh", methods=["GET", "POST"])
 def refresh_videos():
 
     global VIDEO_CACHE, VIDEO_CACHE_TIME
@@ -3353,35 +3486,16 @@ def upload():
     if not _looks_like_video(file, extension):
         return "The uploaded file does not look like a valid video.", 400
 
-    filename = secure_filename(
-        file.filename
-    )
+    original_name = secure_filename(file.filename)
+    _, ext = os.path.splitext(original_name)
+    ext = ext.lower()
+    filename = f"{uuid.uuid4().hex}{ext}"
+    storage_path = f"videos/{filename}"
 
-    name, ext = os.path.splitext(
-        filename
-    )
-
-    filename = (
-        name
-        +
-        "_"
-        +
-        str(
-            random.randint(
-                100000,
-                999999
-            )
-        )
-        +
-        ext
-    )
-
-    file.save(
-        os.path.join(
-            UPLOAD_FOLDER,
-            filename
-        )
-    )
+    try:
+        media_url = upload_to_storage(file, storage_path, content_type or "application/octet-stream")
+    except Exception as error:
+        return str(error), 503
 
     db = get_db()
 
@@ -3420,10 +3534,7 @@ def upload():
         """,
         (
             filename,
-            url_for(
-                "uploaded_video",
-                filename=filename
-            ),
+            media_url,
             session["username"],
             "user_upload",
             caption,
@@ -3465,6 +3576,7 @@ def api_uploads():
             videos.tags,
             videos.created_at,
             users.uid AS creator_uid,
+            users.friend_uid AS creator_friend_uid,
             users.gender AS creator_gender,
             users.photo AS creator_photo,
             (
@@ -3503,6 +3615,7 @@ def api_uploads():
                 else "ticktock"
             ),
             "creator_uid": row["creator_uid"],
+            "creator_friend_uid": row["creator_friend_uid"],
             "creator_gender": row["creator_gender"],
             "creator_photo": row["creator_photo"],
             "creator_followers": row["creator_followers"] or 0,
