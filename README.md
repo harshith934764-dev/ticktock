@@ -1,18 +1,12 @@
-# Tick Tock — Production Security Update
+# Tick Tock — Supabase PostgreSQL Production Build
 
-This package is based on the working Tick Tock build. It preserves the existing SQLite schema/data and adds production-oriented protections without resetting the database.
+This build is prepared to use **Supabase PostgreSQL** when the Render environment variable `DATABASE_URL` is present. SQLite is retained only as a local-development fallback.
 
-## Included
-- Secure session-cookie settings for HTTPS production.
-- Cross-site Origin/Referer checks for state-changing browser requests.
-- Lightweight rate limits for login, registration, OTP, password reset, and uploads.
-- Safer upload validation with size, extension/MIME, and basic video signature checks.
-- Security response headers.
-- Safe database indexes created with `IF NOT EXISTS`; no rows are deleted.
-- Existing Google Sign-In and Home functionality retained.
+## Production setup
+1. Create the Supabase PostgreSQL project.
+2. Use the Supabase **Session pooler** connection string for the hosted Flask service.
+3. In Render, add `DATABASE_URL` with that connection string. **Never commit it to GitHub or send it in chat.**
+4. Deploy. Tick Tock will create its required PostgreSQL tables automatically.
+5. Because the old SQLite data is intentionally being left behind, the new Supabase database starts clean.
 
-## Required Render environment variable
-Set a strong random `SECRET_KEY` in Render Environment Variables. Keep Google, Resend, and Razorpay secrets only in Render Environment Variables; never commit them to GitHub.
-
-## Important
-This hardening is one production layer, not a complete security audit. Before public launch, add persistent storage/backups, centralized rate limiting/WAF as traffic grows, admin moderation, privacy/terms, account deletion, monitoring, and a proper persistent database/media architecture.
+Existing application features and Google Sign-In are preserved.

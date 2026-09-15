@@ -372,6 +372,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Render Postgres is used when DATABASE_URL is present.
 # SQLite remains available for local development only.
 DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+# When DATABASE_URL is set, Tick Tock uses Supabase/PostgreSQL.
+# When it is absent, SQLite remains available for local development.
 USE_POSTGRES = bool(DATABASE_URL)
 
 DATA_DIR = os.environ.get("TICKTOCK_DATA_DIR", BASE_DIR)
@@ -1195,7 +1197,8 @@ def google_callback():
                 (email, random_password_hash, uid, friend_uid, google_name or email.split("@")[0], google_id),
             )
             db.commit()
-            user = db.execute("SELECT * FROM users WHERE id=?", (db.execute("SELECT last_insert_rowid() AS id").fetchone()["id"],)).fetchone()
+            # Re-query by a unique value so this works on both PostgreSQL and SQLite.
+            user = db.execute("SELECT * FROM users WHERE google_id=?", (google_id,)).fetchone()
             db.close()
 
         _start_user_session(user)
