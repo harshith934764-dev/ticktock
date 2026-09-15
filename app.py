@@ -395,6 +395,15 @@ def create_uid(db):
             return uid
 
 
+def create_friend_uid(db):
+    """Generate a simple 8-digit friend UID while preserving the legacy uid."""
+    while True:
+        code = str(random.randint(10000000, 99999999))
+        found = db.execute("SELECT id FROM users WHERE friend_uid=?", (code,)).fetchone()
+        if not found:
+            return code
+
+
 def _init_sqlite():
     # Keep the existing local-development database schema.
     db = get_db()
@@ -423,6 +432,7 @@ def _init_sqlite():
         ("trusted_token_expires", "REAL"),
         ("display_name", "TEXT"),
         ("birth_date", "TEXT"),
+        ("friend_uid", "TEXT"),
     ]:
         add_column_if_missing(db, "users", c, d)
 
@@ -431,6 +441,10 @@ def _init_sqlite():
     ).fetchall()
     for user in users_without_uid:
         db.execute("UPDATE users SET uid=? WHERE id=?", (create_uid(db), user["id"]))
+
+    users_without_friend_uid = db.execute("SELECT id FROM users WHERE friend_uid IS NULL OR friend_uid=''").fetchall()
+    for user in users_without_friend_uid:
+        db.execute("UPDATE users SET friend_uid=? WHERE id=?", (create_friend_uid(db), user["id"]))
 
     db.execute("""CREATE TABLE IF NOT EXISTS videos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -675,6 +689,7 @@ def _init_postgres():
         ("trusted_token_expires", "DOUBLE PRECISION"),
         ("display_name", "TEXT"),
         ("birth_date", "DATE"),
+        ("friend_uid", "TEXT"),
     ]:
         add_column_if_missing(db, "users", c, d)
 
@@ -907,6 +922,7 @@ def register():
         )
 
     uid = create_uid(db)
+    friend_uid = create_friend_uid(db)
 
     password_hash = (
         generate_password_hash(
@@ -921,14 +937,16 @@ def register():
             username,
             password,
             uid,
+            friend_uid,
             profile_complete
         )
-        VALUES (?, ?, ?, 0)
+        VALUES (?, ?, ?, ?, 0)
         """,
         (
             email,
             password_hash,
-            uid
+            uid,
+            friend_uid
         )
     )
 
@@ -1387,6 +1405,7 @@ def api_me():
             id,
             username,
             uid,
+            friend_uid,
             gender,
             age,
             birth_date,
@@ -1438,6 +1457,7 @@ def find_user(uid):
             id,
             username,
             uid,
+            friend_uid,
             gender,
             age,
             birth_date,
@@ -1446,9 +1466,10 @@ def find_user(uid):
             bio,
             location
         FROM users
-        WHERE uid=?
+        WHERE uid=? OR friend_uid=?
         """,
         (
+            uid,
             uid,
         )
     ).fetchone()
@@ -1491,9 +1512,10 @@ def send_friend_request(uid):
         """
         SELECT id
         FROM users
-        WHERE uid=?
+        WHERE uid=? OR friend_uid=?
         """,
         (
+            uid,
             uid,
         )
     ).fetchone()
@@ -1696,6 +1718,7 @@ def get_friend_requests():
             friend_requests.created_at,
             users.username,
             users.uid,
+            users.friend_uid,
             users.photo
         FROM friend_requests
         JOIN users
@@ -1873,6 +1896,7 @@ def get_friends():
             users.id,
             users.username,
             users.uid,
+            users.friend_uid,
             users.photo,
             users.bio,
             users.location
@@ -1927,9 +1951,10 @@ def remove_friend(uid):
         """
         SELECT id
         FROM users
-        WHERE uid=?
+        WHERE uid=? OR friend_uid=?
         """,
         (
+            uid,
             uid,
         )
     ).fetchone()
@@ -2003,9 +2028,10 @@ def block_user(uid):
         """
         SELECT id
         FROM users
-        WHERE uid=?
+        WHERE uid=? OR friend_uid=?
         """,
         (
+            uid,
             uid,
         )
     ).fetchone()
@@ -2130,9 +2156,10 @@ def unblock_user(uid):
         """
         SELECT id
         FROM users
-        WHERE uid=?
+        WHERE uid=? OR friend_uid=?
         """,
         (
+            uid,
             uid,
         )
     ).fetchone()
@@ -2183,6 +2210,7 @@ def blocked_users():
         SELECT
             users.username,
             users.uid,
+            users.friend_uid,
             users.photo
         FROM blocks
         JOIN users
@@ -2282,8 +2310,8 @@ def follow_user(uid):
     db = get_db()
 
     target = db.execute(
-        "SELECT id FROM users WHERE uid=?",
-        (uid,)
+        "SELECT id FROM users WHERE uid=? OR friend_uid=?",
+        (uid, uid)
     ).fetchone()
 
     if not target:
@@ -2375,7 +2403,7 @@ def api_followers():
     db = get_db()
     rows = db.execute(
         """
-        SELECT users.id, users.username, users.uid,
+        SELECT users.id, users.username, users.uid, users.friend_uid,
                users.gender, users.photo, users.bio
         FROM follows
         JOIN users ON users.id=follows.follower_id
@@ -2396,7 +2424,7 @@ def api_following():
     db = get_db()
     rows = db.execute(
         """
-        SELECT users.id, users.username, users.uid,
+        SELECT users.id, users.username, users.uid, users.friend_uid,
                users.gender, users.photo, users.bio
         FROM follows
         JOIN users ON users.id=follows.following_id
@@ -2419,7 +2447,7 @@ def api_search():
     if not q:
         return jsonify({"users": [], "videos": []})
     db = get_db(); like = f"%{q}%"
-    users = db.execute("SELECT id, username, uid, gender, photo, bio FROM users WHERE lower(username) LIKE lower(?) OR lower(uid) LIKE lower(?) ORDER BY id DESC LIMIT 20", (like, like)).fetchall()
+    users = db.execute("SELECT id, username, uid, friend_uid, gender, photo, bio FROM users WHERE lower(username) LIKE lower(?) OR lower(uid) LIKE lower(?) OR lower(friend_uid) LIKE lower(?) ORDER BY id DESC LIMIT 20", (like, like, like)).fetchall()
     videos = db.execute("SELECT id, title, url, creator, source, caption, tags, uploader_id FROM videos WHERE privacy='public' AND (lower(title) LIKE lower(?) OR lower(COALESCE(caption,'')) LIKE lower(?) OR lower(COALESCE(tags,'')) LIKE lower(?)) ORDER BY created_at DESC LIMIT 20", (like,like,like)).fetchall()
     db.close()
     return jsonify({"users":[dict(x) for x in users],"videos":[dict(x) for x in videos]})
@@ -2967,6 +2995,33 @@ def share_video(video_id):
         "success": True,
         "count": count
     })
+
+
+# =========================================================
+# FRIEND REELS
+# =========================================================
+
+@app.route("/api/friend-reels")
+def friend_reels():
+    if not logged_in():
+        return jsonify({"success": False, "login_required": True}), 401
+    me = session["user_id"]
+    db = get_db()
+    rows = db.execute("""
+        SELECT videos.id, videos.title, videos.url, videos.creator, videos.caption, videos.tags, videos.created_at,
+               users.uid AS creator_uid, users.friend_uid AS creator_friend_uid, users.username, users.gender, users.photo
+        FROM videos
+        JOIN friends ON (
+            (friends.user1_id=? AND friends.user2_id=videos.uploader_id) OR
+            (friends.user2_id=? AND friends.user1_id=videos.uploader_id)
+        )
+        JOIN users ON users.id=videos.uploader_id
+        WHERE (videos.privacy='public' OR videos.privacy IS NULL)
+        ORDER BY videos.created_at DESC, videos.id DESC
+        LIMIT 30
+    """, (me, me)).fetchall()
+    db.close()
+    return jsonify([dict(r) for r in rows])
 
 
 # =========================================================

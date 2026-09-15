@@ -1,0 +1,2949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Tick Tock</title>
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    font-family:Arial,sans-serif;
+}
+
+body{
+    background:#050509;
+    color:white;
+    overflow:hidden;
+}
+
+#feed{
+    height:100vh;
+    overflow-y:auto;
+    overscroll-behavior-y:contain;
+    scroll-behavior:smooth;
+    scroll-snap-type:y mandatory;
+    -webkit-overflow-scrolling:touch;
+}
+
+.reel{
+    height:100vh;
+    position:relative;
+    scroll-snap-align:start;
+    background:#08080f;
+}
+
+.reel video{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+}
+
+.topbar{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    z-index:20;
+    padding:18px 22px;
+    display:flex;
+    justify-content:space-between;
+    background:linear-gradient(
+        rgba(0,0,0,.7),
+        transparent
+    );
+}
+
+.logo{
+    font-size:27px;
+    font-weight:900;
+    flex:0 0 auto;
+    white-space:nowrap;
+}
+
+.logo span{
+    background:linear-gradient(
+        90deg,#ff2d8d,#7957ff,#00d9ff
+    );
+    -webkit-background-clip:text;
+    color:transparent;
+}
+
+.top-buttons{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    max-width:calc(100vw - 115px);
+    overflow-x:auto;
+    overflow-y:hidden;
+    scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+    padding:2px;
+}
+.top-buttons::-webkit-scrollbar{display:none}
+
+.icon-btn{
+    width:43px;
+    height:43px;
+    min-width:43px;
+    flex:0 0 43px;
+    border:0;
+    border-radius:50%;
+    background:rgba(20,20,35,.8);
+    color:white;
+    font-size:21px;
+    cursor:pointer;
+}
+
+.side{
+    position:absolute;
+    right:15px;
+    bottom:90px;
+    z-index:5;
+    display:flex;
+    flex-direction:column;
+    gap:17px;
+}
+
+.action{
+    width:55px;
+    text-align:center;
+    cursor:pointer;
+}
+
+.circle{
+    width:49px;
+    height:49px;
+    border-radius:50%;
+    background:rgba(0,0,0,.55);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:22px;
+}
+
+.action small{
+    font-size:11px;
+    margin-top:4px;
+    display:block;
+}
+
+.bottom-info{
+    position:absolute;
+    left:18px;
+    right:85px;
+    bottom:25px;
+    z-index:5;
+    text-shadow:0 2px 8px #000;
+}
+
+.creator{
+    font-size:18px;
+    font-weight:bold;
+    margin-bottom:7px;
+}
+
+.caption{
+    font-size:14px;
+}
+
+.sound{
+    margin-top:7px;
+    font-size:12px;
+}
+
+/* SOUND */
+
+.gate{
+    position:fixed;
+    inset:0;
+    z-index:100;
+    background:#060610;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.gate-card{
+    width:min(420px,90%);
+    padding:35px;
+    border-radius:28px;
+    text-align:center;
+    background:#15152b;
+    box-shadow:0 20px 80px #000;
+}
+
+.gate-card h1{
+    font-size:32px;
+    margin-bottom:10px;
+}
+
+.gate-card p{
+    color:#aaa;
+    margin-bottom:25px;
+}
+
+.primary{
+    width:100%;
+    border:0;
+    padding:15px;
+    border-radius:15px;
+    color:white;
+    font-weight:bold;
+    font-size:16px;
+    background:linear-gradient(
+        90deg,#ff2d8d,#7055ff
+    );
+    cursor:pointer;
+}
+
+.source-card{
+    width:100%;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:16px;
+    border:1px solid #30304b;
+    border-radius:18px;
+    background:#19192b;
+    color:white;
+    text-align:left;
+    cursor:pointer;
+}
+.source-card:hover{
+    background:#252541;
+    transform:translateY(-1px);
+}
+.source-icon{
+    width:48px;
+    height:48px;
+    border-radius:14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:linear-gradient(135deg,#ff2d8d,#7055ff);
+    font-size:24px;
+    flex-shrink:0;
+}
+.source-card strong{
+    display:block;
+    font-size:16px;
+}
+.source-card small{
+    display:block;
+    color:#999;
+    margin-top:4px;
+    font-size:12px;
+}
+
+/* PANELS */
+
+.panel-bg{
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:1000;
+    background:rgba(0,0,0,.7);
+    backdrop-filter:blur(7px);
+}
+
+.panel{
+    position:absolute;
+    z-index:1001;
+    left:50%;
+    bottom:0;
+    transform:translateX(-50%);
+    width:min(620px,100%);
+    max-height:88vh;
+    overflow-y:auto;
+    background:#101020;
+    border-radius:28px 28px 0 0;
+    padding:24px;
+}
+
+.panel-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+    position:sticky;
+    top:0;
+    z-index:10;
+    padding-bottom:8px;
+    background:#101020;
+}
+
+.close{
+    width:40px;
+    min-width:40px;
+    height:40px;
+    border:0;
+    border-radius:50%;
+    background:#292941;
+    color:white;
+    font-size:17px;
+    cursor:pointer;
+}
+
+/* PROFILE */
+
+.profile-card{
+    text-align:center;
+}
+
+.avatar{
+    width:100px;
+    height:100px;
+    border-radius:50%;
+    margin:auto;
+    object-fit:cover;
+    background:linear-gradient(
+        135deg,#ff3c9b,#704cff
+    );
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:42px;
+}
+
+.profile-card h2{
+    margin-top:14px;
+}
+
+.uid{
+    color:#9b8cff;
+    font-size:13px;
+    margin-top:6px;
+}
+
+.bio{
+    color:#aaa;
+    margin:14px 0;
+}
+
+.profile-buttons{
+    display:flex;
+    gap:10px;
+}
+
+.profile-buttons button{
+    flex:1;
+    border:0;
+    border-radius:14px;
+    padding:13px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.edit{
+    background:white;
+    color:#111;
+}
+
+.friends{
+    background:#282844;
+    color:white;
+}
+
+.logout{
+    background:#5a2028;
+    color:#fff;
+}
+
+.profile-buttons{
+    flex-wrap:wrap;
+}
+
+.profile-buttons button{
+    min-width:140px;
+}
+
+/* FRIENDS */
+
+.search{
+    display:flex;
+    gap:8px;
+}
+
+.search input{
+    flex:1;
+    background:#19192d;
+    border:1px solid #30304b;
+    color:white;
+    border-radius:13px;
+    padding:13px;
+    outline:none;
+}
+
+.search button{
+    border:0;
+    border-radius:13px;
+    padding:0 17px;
+    background:#7055ff;
+    color:white;
+    cursor:pointer;
+}
+
+.section{
+    color:#999;
+    font-size:14px;
+    margin:20px 0 9px;
+}
+
+.user-card{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px;
+    background:#19192b;
+    border-radius:16px;
+    margin:8px 0;
+}
+
+.user-avatar{
+    width:48px;
+    height:48px;
+    border-radius:50%;
+    object-fit:cover;
+    background:linear-gradient(
+        135deg,#ff3c9b,#704cff
+    );
+}
+
+.user-info{
+    flex:1;
+}
+
+.user-info strong{
+    display:block;
+}
+
+.user-info small{
+    color:#888;
+}
+
+.user-card button{
+    border:0;
+    border-radius:10px;
+    padding:9px 12px;
+    background:#7055ff;
+    color:white;
+    cursor:pointer;
+}
+
+.accept{
+    background:#13b878 !important;
+}
+
+.reject{
+    background:#34344c !important;
+}
+
+/* PUBLIC SOCIAL UI */
+.creator-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:8px;
+}
+.creator-avatar{
+    width:42px;
+    height:42px;
+    border-radius:50%;
+    object-fit:cover;
+    background:#202035;
+    border:2px solid rgba(255,255,255,.7);
+    flex-shrink:0;
+}
+.follow-mini{
+    border:1px solid rgba(255,255,255,.65);
+    background:rgba(0,0,0,.48);
+    color:#fff;
+    border-radius:999px;
+    padding:7px 12px;
+    font-weight:700;
+    font-size:12px;
+}
+.follow-mini.following{
+    background:#fff;
+    color:#111;
+}
+.discover-grid{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+.discover-card{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px;
+    border:1px solid #2d2d47;
+    border-radius:18px;
+    background:linear-gradient(145deg,#19192b,#12121f);
+}
+.discover-card .discover-info{
+    flex:1;
+    min-width:0;
+}
+.discover-card strong{
+    display:block;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+.discover-card small{
+    color:#9292aa;
+}
+.discover-card button{
+    border:0;
+    border-radius:999px;
+    padding:9px 14px;
+    background:linear-gradient(90deg,#ff2d8d,#7055ff);
+    color:#fff;
+    font-weight:800;
+}
+.discover-card button.following{
+    background:#fff;
+    color:#111;
+}
+
+/* COMMENTS */
+
+.comments-panel{
+    position:fixed;
+    left:50%;
+    bottom:0;
+    transform:translateX(-50%);
+    width:min(620px,100%);
+    height:72vh;
+    background:#11111f;
+    border-radius:28px 28px 0 0;
+    z-index:80;
+    display:none;
+    flex-direction:column;
+    box-shadow:0 -20px 70px #000;
+}
+
+.comments-head{
+    padding:18px 20px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    border-bottom:1px solid #29293d;
+}
+
+.comments-count{
+    color:#888;
+    font-size:13px;
+    margin-top:4px;
+}
+
+.comments-list{
+    flex:1;
+    overflow-y:auto;
+    padding:15px;
+}
+
+.comment-item{
+    display:flex;
+    gap:10px;
+    margin-bottom:17px;
+}
+
+.comment-avatar{
+    width:40px;
+    height:40px;
+    border-radius:50%;
+    background:linear-gradient(
+        135deg,#ff3c9b,#704cff
+    );
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+}
+
+.comment-body{
+    background:#1b1b2d;
+    border-radius:15px;
+    padding:10px 13px;
+    flex:1;
+}
+
+.comment-user{
+    font-weight:bold;
+    font-size:14px;
+}
+
+.comment-text{
+    color:#ccc;
+    margin-top:4px;
+    font-size:14px;
+}
+
+.comment-input{
+    padding:12px;
+    display:flex;
+    gap:8px;
+    border-top:1px solid #29293d;
+}
+
+.comment-input input{
+    flex:1;
+    background:#1b1b2d;
+    border:1px solid #30304b;
+    color:white;
+    border-radius:14px;
+    padding:13px;
+    outline:none;
+}
+
+.comment-input button{
+    width:50px;
+    border:0;
+    border-radius:14px;
+    background:#7055ff;
+    color:white;
+    font-size:19px;
+    cursor:pointer;
+}
+
+/* LOCATION */
+
+.location{
+    display:none;
+    position:fixed;
+    z-index:90;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    width:min(420px,90%);
+    padding:28px;
+    border-radius:24px;
+    text-align:center;
+    background:#151528;
+}
+
+.location p{
+    color:#aaa;
+    margin:12px 0 20px;
+}
+
+.location-buttons{
+    display:flex;
+    gap:10px;
+}
+
+.location-buttons button{
+    flex:1;
+    border:0;
+    border-radius:13px;
+    padding:12px;
+    cursor:pointer;
+}
+
+.allow{
+    background:#7055ff;
+    color:white;
+}
+
+.skip{
+    background:#292940;
+    color:white;
+}
+
+/* FAST / SMOOTH MOBILE PERFORMANCE */
+html{
+    background:#050509;
+    scroll-behavior:smooth;
+}
+body{
+    -webkit-font-smoothing:antialiased;
+    overscroll-behavior:none;
+    -webkit-tap-highlight-color:transparent;
+}
+#feed{
+    overscroll-behavior-y:contain;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+}
+#feed::-webkit-scrollbar{display:none;}
+.reel{
+    contain:layout paint;
+    isolation:isolate;
+    transform:translateZ(0);
+    backface-visibility:hidden;
+}
+.reel video{
+    transform:translateZ(0);
+    backface-visibility:hidden;
+}
+.icon-btn,.circle,.primary,.source-card,.profile-buttons button,.search button,.user-card button{
+    transition:transform .16s ease,opacity .16s ease;
+}
+.icon-btn:active,.circle:active,.primary:active,.source-card:active,.profile-buttons button:active,.search button:active,.user-card button:active{
+    transform:scale(.94);
+}
+@media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto;}
+    *{transition:none!important;animation:none!important;}
+}
+
+
+.v3-card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:14px;margin-bottom:10px}.v3-stat{padding:18px;border-radius:16px;background:rgba(255,255,255,.07);text-align:center}.v3-stat b{display:block;font-size:28px}.v3-muted{color:#aaa;font-size:12px}.v3-row{display:flex;align-items:center;gap:10px}.v3-action{border:0;border-radius:12px;padding:9px 12px;background:#fff;color:#111;font-weight:700}
+</style>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+<style id="premium-home-ui">
+
+/* TICK TOCK PREMIUM UI — V3.1 */
+:root{--bg:#08090d;--panel:rgba(18,19,25,.88);--panel2:rgba(255,255,255,.055);--line:rgba(255,255,255,.11);--muted:#9b9da8;--text:#f7f7fa;--accent:#8b7cff;--accent2:#b58cff;--good:#62d6a0}
+*{box-sizing:border-box}
+html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;background:var(--bg)!important;color:var(--text)!important}
+button,input,textarea,select{font-family:inherit!important}
+button{transition:transform .18s ease,opacity .18s ease,background .18s ease,border-color .18s ease,box-shadow .18s ease}
+button:active{transform:scale(.98)}
+
+body{background:#050609!important}
+.topbar{padding:16px 20px!important;background:linear-gradient(180deg,rgba(4,5,8,.82),rgba(4,5,8,0))!important;backdrop-filter:blur(8px)!important}.logo{font-size:22px!important;letter-spacing:-.6px!important}.logo span{background:linear-gradient(90deg,#a493ff,#d5c6ff)!important;-webkit-background-clip:text!important;color:transparent!important}
+.icon-btn{width:44px!important;height:44px!important;background:rgba(12,13,18,.78)!important;border:1px solid rgba(255,255,255,.11)!important;box-shadow:0 8px 25px rgba(0,0,0,.22)!important}.icon-btn:hover{background:rgba(28,29,38,.9)!important}
+.side{right:16px!important;bottom:96px!important;gap:14px!important}.action{width:52px!important}.circle{width:48px!important;height:48px!important;background:rgba(8,9,13,.66)!important;border:1px solid rgba(255,255,255,.11)!important;box-shadow:0 8px 25px rgba(0,0,0,.22)!important;backdrop-filter:blur(14px)!important}.action small{color:rgba(255,255,255,.86)!important;font-weight:600!important;text-shadow:0 1px 8px #000!important}
+.bottom-info{left:20px!important;right:90px!important;bottom:28px!important;text-shadow:0 2px 16px #000!important}.creator{font-size:17px!important;letter-spacing:-.2px!important}.caption{font-size:14px!important;color:#eee!important;line-height:1.45!important}.sound{color:#c8c8d0!important}
+.gate{background:rgba(5,6,9,.86)!important;backdrop-filter:blur(24px)!important}.gate-card{background:linear-gradient(180deg,rgba(22,23,30,.97),rgba(11,12,17,.97))!important;border:1px solid var(--line)!important;box-shadow:0 35px 110px rgba(0,0,0,.65)!important;border-radius:30px!important}.gate-card h1{letter-spacing:-1px!important}.gate-card p{color:#9698a4!important}.primary{background:linear-gradient(135deg,#8173ff,#a989ff)!important;box-shadow:0 12px 28px rgba(112,93,255,.2)!important}.source-card{background:rgba(255,255,255,.045)!important;border-color:var(--line)!important;border-radius:20px!important}.source-card:hover{background:rgba(255,255,255,.07)!important}.source-icon{background:linear-gradient(135deg,#8173ff,#a989ff)!important}
+/* common panels/modals used throughout the home page */
+.modal,.panel,.popup,.wallet-panel,.search-panel,.comments-panel,.profile-panel{background:rgba(15,16,22,.96)!important;border:1px solid rgba(255,255,255,.11)!important;box-shadow:0 30px 100px rgba(0,0,0,.6)!important;border-radius:24px!important;backdrop-filter:blur(28px)!important}
+.modal input,.modal textarea,.modal select,.panel input,.panel textarea,.panel select,.popup input,.popup textarea,.popup select{background:#0a0b10!important;border:1px solid rgba(255,255,255,.1)!important;border-radius:15px!important;color:#fff!important}
+.primary,.save,.send,.follow-btn{border-radius:15px!important;box-shadow:0 10px 25px rgba(112,93,255,.16)!important}
+@media(max-width:600px){.topbar{padding:13px 14px!important}.logo{font-size:20px!important}.top-buttons{gap:7px!important}.icon-btn{width:42px!important;height:42px!important}.side{right:10px!important}.bottom-info{left:15px!important;right:78px!important}}
+</style>
+<style id="responsive-device-ui">
+/* Desktop keeps the spacious top command bar. Android gets a dedicated bottom dock. */
+.mobile-nav,.mobile-more-panel{display:none}
+.top-buttons{position:relative}
+@media (min-width: 901px){
+  .topbar{padding-left:32px!important;padding-right:32px!important}
+  .top-buttons{max-width:none!important;overflow:visible!important}
+  .icon-btn{width:46px!important;height:46px!important}
+}
+@media (max-width: 900px){
+  body{padding-bottom:76px!important}
+  .topbar{height:64px!important;padding:10px 12px!important;align-items:center!important}
+  .logo{font-size:20px!important}
+  .top-buttons{display:none!important}
+  .reel video{object-position:center center!important}
+  .side{right:9px!important;bottom:112px!important;gap:10px!important}
+  .action{width:48px!important}
+  .circle{width:44px!important;height:44px!important;font-size:19px!important}
+  .action small{font-size:10px!important}
+  .bottom-info{left:14px!important;right:68px!important;bottom:94px!important}
+  .mobile-nav{position:fixed;display:flex;left:8px;right:8px;bottom:8px;height:62px;z-index:2000;border:1px solid rgba(255,255,255,.12);background:rgba(10,11,16,.88);backdrop-filter:blur(24px);border-radius:22px;box-shadow:0 18px 55px rgba(0,0,0,.55);padding:5px;gap:3px}
+  .mobile-nav button{flex:1;min-width:0;border:0;background:transparent;color:#aaa;border-radius:17px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:20px;cursor:pointer}
+  .mobile-nav button:active{background:rgba(255,255,255,.08);transform:scale(.96)}
+  .mobile-nav small{font-size:9px;font-weight:700;letter-spacing:.2px;color:#b8bac4}
+  .mobile-nav span{position:relative;line-height:20px}
+  #mobileNotifBadge{position:absolute;top:-5px;right:-9px;background:#ff365e;color:#fff;font-style:normal;font-size:8px;min-width:14px;height:14px;border-radius:99px;display:none;align-items:center;justify-content:center;padding:0 3px}
+  .mobile-more-card{width:min(94vw,520px)!important;max-height:82vh!important;overflow:auto!important}
+  .mobile-more-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .mobile-more-grid button{min-height:88px;border:1px solid rgba(255,255,255,.09);border-radius:18px;background:rgba(255,255,255,.05);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;font-size:25px}
+  .mobile-more-grid b{font-size:12px}
+}
+@media (max-width:380px){
+  .mobile-nav{left:5px;right:5px;gap:1px}
+  .mobile-nav small{font-size:8px}
+  .mobile-nav span{font-size:18px}
+  .side{right:6px!important}
+}
+
+.uid-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:6px}.uid-row .uid{margin:0}
+/* V3.2 mobile panels + upload progress + friends reels */
+.upload-progress-card{width:min(560px,calc(100vw - 24px));bottom:50%;transform:translate(-50%,50%);border-radius:28px!important;max-height:none!important}
+.upload-progress-track{height:12px;border-radius:99px;background:#242536;overflow:hidden;margin-top:16px}.upload-progress-bar{height:100%;width:0%;background:linear-gradient(90deg,#7d6cff,#c16cff);transition:width .15s ease}
+.upload-progress-meta{display:flex;justify-content:space-between;margin-top:10px;color:#a9abb8;font-size:13px}.upload-progress-title{font-weight:700}.upload-success{margin-top:16px;padding:13px;border-radius:14px;background:rgba(73,210,145,.12);border:1px solid rgba(73,210,145,.28);color:#83e5b8;font-weight:700}
+.friends-tabs{display:flex;gap:8px;margin:0 0 14px}.friends-tab{flex:1;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.045);color:#aaa;border-radius:14px;padding:11px;font-weight:800}.friends-tab.active{background:rgba(139,124,255,.2);color:#fff;border-color:rgba(139,124,255,.55)}
+.friend-reel-card{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:18px;padding:10px;margin:10px 0}.friend-reel-card video{width:100%;max-height:52vh;object-fit:contain;background:#000;border-radius:14px}.friend-reel-head{display:flex;align-items:center;gap:9px;padding:4px 2px 9px}.friend-reel-head .mini-avatar{width:34px;height:34px;border-radius:50%;object-fit:cover;background:#292941}.friend-reel-head b{font-size:14px}.friend-reel-card p{color:#bbb;margin:9px 2px 2px}.copy-uid{border:0;background:rgba(139,124,255,.16);color:#cfc8ff;border-radius:10px;padding:7px 9px;font-size:11px;font-weight:800;cursor:pointer}
+@media(max-width:900px){.panel-bg{z-index:3000!important;padding:10px!important}.panel{z-index:3001!important;width:100%!important;max-width:720px!important;max-height:calc(100dvh - 20px)!important;min-height:0!important;padding:20px 16px 96px!important;border-radius:26px!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch}.panel-head{background:#101020!important;top:-1px!important;padding:2px 0 12px!important}.close{z-index:20!important}.profile-card{padding-bottom:20px}.profile-buttons{display:grid!important;grid-template-columns:1fr 1fr!important}.profile-buttons button{min-width:0!important;width:100%!important}.friends-reels-panel{padding-bottom:90px!important}.upload-progress-card{bottom:50%!important;transform:translate(-50%,50%)!important;padding-bottom:24px!important}}
+@media(max-width:430px){.panel{padding-left:13px!important;padding-right:13px!important}.profile-buttons{grid-template-columns:1fr 1fr!important;gap:9px!important}.profile-buttons button{font-size:13px!important;padding:12px 7px!important}.friends-tabs{position:sticky;top:48px;z-index:8;background:#101020;padding:5px 0}.search{flex-wrap:nowrap}.search input{min-width:0}.search button{flex:0 0 auto}.friend-reel-card video{max-height:48vh}}
+</style>
+</head>
+
+<body>
+<form id="homeUploadForm" method="POST" action="/upload" enctype="multipart/form-data" style="display:none;">
+    <input id="homeVideoPicker" type="file" name="video" accept="video/*">
+    <input id="homeCaption" type="hidden" name="caption">
+    <input id="homeTags" type="hidden" name="tags">
+    <input id="homePrivacy" type="hidden" name="privacy" value="public">
+</form>
+
+<div id="uploadProgressPanel" class="panel-bg" style="z-index:5000;">
+  <div class="panel upload-progress-card">
+    <div class="panel-head"><h2>Uploading Reel</h2><button class="close" type="button" onclick="cancelUploadProgress()">✕</button></div>
+    <div class="upload-progress-title" id="uploadProgressText">Preparing your video…</div>
+    <div class="upload-progress-track"><div id="uploadProgressBar" class="upload-progress-bar"></div></div>
+    <div class="upload-progress-meta"><span id="uploadProgressPercent">0%</span><span id="uploadProgressStatus">Uploading…</span></div>
+    <div id="uploadSuccessBox" class="upload-success" style="display:none;">✓ Successfully uploaded. Your Reel is now in Home.</div>
+  </div>
+</div>
+
+<div id="recordReviewPanel" class="panel-bg">
+    <div class="panel">
+        <div class="panel-head">
+            <h2>🎬 Preview Reel</h2>
+            <button class="close" type="button" onclick="cancelRecording()">✕</button>
+        </div>
+        <video id="recordedPreview" controls playsinline
+               style="width:100%;max-height:55vh;background:#000;border-radius:18px;"></video>
+
+        <label style="display:block;margin-top:16px;margin-bottom:7px;font-weight:bold;">Caption</label>
+        <textarea id="recordCaption" maxlength="500" placeholder="Write a caption..."
+                  style="width:100%;min-height:85px;padding:12px;border-radius:13px;
+                         background:#19192b;color:white;border:1px solid #30304b;resize:vertical;"></textarea>
+
+        <label style="display:block;margin-top:14px;margin-bottom:7px;font-weight:bold;">Tags / Hashtags</label>
+        <input id="recordTags" maxlength="500" type="text" placeholder="#india #cricket #fun"
+               style="width:100%;padding:12px;border-radius:13px;background:#19192b;color:white;border:1px solid #30304b;">
+
+        <label style="display:block;margin-top:14px;margin-bottom:7px;font-weight:bold;">Who can watch this video?</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <button type="button" id="recordPublicBtn" class="primary" onclick="setRecordPrivacy('public')">🌍 Public</button>
+            <button type="button" id="recordPrivateBtn" class="secondary" onclick="setRecordPrivacy('private')">🔒 Private</button>
+        </div>
+        <p id="recordPrivacyStatus" style="color:#aaa;font-size:13px;margin:10px 0 0;">Public — can appear in the Home feed.</p>
+
+        <button type="button" class="primary" onclick="postRecordedReel()" style="margin-top:12px;">🚀 Post Reel</button>
+    </div>
+</div>
+
+<div id="cameraPanel" class="panel-bg">
+    <div class="panel" style="text-align:center;">
+        <div class="panel-head">
+            <h2>🎥 Create Reel</h2>
+            <button class="close" type="button" onclick="closeCamera()">✕</button>
+        </div>
+        <video id="cameraPreview" autoplay playsinline
+               style="width:100%;max-height:55vh;background:#000;border-radius:18px;"></video>
+        <div style="display:flex;gap:10px;margin-top:15px;">
+            <button type="button" class="primary" id="startRecordBtn"
+                    onclick="startCamera()">📷 Start Camera</button>
+            <button type="button" class="primary" id="recordBtn"
+                    onclick="toggleRecording()" style="display:none;">🔴 Start Recording</button>
+        </div>
+        <p id="cameraStatus" style="color:#aaa;margin-top:12px;">
+            Choose Camera to record a new Reel.
+        </p>
+    </div>
+</div>
+
+
+<!-- CREATE REEL CHOOSER -->
+<div class="panel-bg" id="createReelPanel">
+    <div class="panel">
+        <div class="panel-head">
+            <h2>➕ Create Reel</h2>
+            <button class="close" type="button" onclick="closeCreateReel()">✕</button>
+        </div>
+
+        <button type="button" class="source-card" onclick="openCamera()">
+            <span class="source-icon">📷</span>
+            <span>
+                <strong>Camera</strong>
+                <small>Record a new Reel with camera + microphone</small>
+            </span>
+        </button>
+
+        <button type="button" class="source-card"
+                onclick="chooseHomeVideo()"
+                style="margin-top:12px;">
+            <span class="source-icon">🎬</span>
+            <span>
+                <strong>Choose Video</strong>
+                <small>Select a video from your laptop</small>
+            </span>
+        </button>
+</div>
+</div>
+
+<!-- SOUND GATE -->
+
+<div class="gate" id="gate">
+
+    <div class="gate-card">
+
+        <h1>🎵 Tick Tock</h1>
+
+        <p>
+            Enter your feed with sound enabled.
+        </p>
+
+        <button
+            class="primary"
+            onclick="enterApp()"
+        >
+            🔊 Enter with Sound
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- TOP -->
+
+<div class="topbar">
+
+    <div class="logo">
+        <span>Tick Tock</span>
+    </div>
+
+    <div class="top-buttons">
+
+        <button
+            class="icon-btn"
+            onclick="refreshReels()"
+            title="Refresh Reels"
+            id="refreshBtn"
+        >
+            🔄
+        </button>
+
+        <button
+            class="icon-btn"
+            type="button"
+            onclick="openCreateReel()"
+            title="Create Reel"
+        >
+            ➕
+        </button>
+
+        <button
+            class="icon-btn"
+            onclick="openFriends()"
+            title="Friends"
+        >
+            👥
+        </button>
+
+        <button class="icon-btn" onclick="openWallet()" title="Diamonds & Top Up" aria-label="Diamonds">💎</button>        <button class="icon-btn" onclick="openSearch()" title="Search">🔎</button>
+        <button class="icon-btn" onclick="openNotifications()" title="Notifications">🔔<span id="notifBadge" style="display:none;position:absolute;margin:-8px 0 0 -10px;background:#ff2d55;border-radius:99px;padding:2px 5px;font-size:10px">0</span></button>
+        <button class="icon-btn" onclick="openSaved()" title="Saved videos">🔖</button>
+        <button class="icon-btn" onclick="openCreatorStats()" title="Creator stats">📊</button>
+
+
+        <button
+            class="icon-btn"
+            onclick="switchUser()"
+            title="Switch User"
+            aria-label="Switch User"
+        >
+            🔄
+        </button>
+
+        <button
+            class="icon-btn"
+            onclick="openProfile()"
+        >
+            👤
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- MOBILE NAVIGATION: purpose-built for Android phones -->
+<div class="mobile-nav" aria-label="Mobile navigation">
+  <button type="button" onclick="mobileHome()"><span>⌂</span><small>Home</small></button>
+  <button type="button" onclick="openCreateReel()"><span>＋</span><small>Create</small></button>
+  <button type="button" onclick="openSearch()"><span>⌕</span><small>Search</small></button>
+  <button type="button" onclick="openNotifications()"><span>♧<i id="mobileNotifBadge">0</i></span><small>Alerts</small></button>
+  <button type="button" onclick="openProfile()"><span>◉</span><small>Profile</small></button>
+  <button type="button" onclick="openMobileMore()"><span>•••</span><small>More</small></button>
+</div>
+
+<div class="panel-bg mobile-more-panel" id="mobileMorePanel">
+  <div class="panel mobile-more-card">
+    <div class="panel-head"><h2>More</h2><button class="close" type="button" onclick="closePanels()">✕</button></div>
+    <div class="mobile-more-grid">
+      <button onclick="showFriendsList()">👥<b>Friends</b></button>
+      <button onclick="openWallet()">💎<b>Diamonds</b></button>
+      <button onclick="openSaved()">🔖<b>Saved</b></button>
+      <button onclick="openCreatorStats()">📊<b>Creator Studio</b></button>
+      <button onclick="switchUser()">🔄<b>Switch User</b></button>
+      <button onclick="refreshReels();closePanels()">↻<b>Refresh Feed</b></button>
+    </div>
+  </div>
+</div>
+
+<!-- FEED -->
+
+<div id="feed"></div>
+
+
+<!-- PROFILE -->
+
+<div
+    class="panel-bg"
+    id="profilePanel"
+>
+
+    <div class="panel">
+
+        <div class="panel-head">
+
+            <h2>My Profile</h2>
+
+            <button
+                class="close"
+                onclick="closePanels()"
+            >
+                ✕
+            </button>
+
+        </div>
+
+        <div class="profile-card">
+
+            <div
+                id="myAvatar"
+                class="avatar"
+            >
+                👤
+            </div>
+
+            <h2 id="myUsername">
+                Loading...
+            </h2>
+
+            <div class="uid-row">
+                <div class="uid" id="myUid">UID</div>
+                <button type="button" class="copy-uid" onclick="copyMyUid()">Copy</button>
+            </div>
+
+            <div
+                class="bio"
+                id="myBio"
+            >
+                Welcome to my Tick Tock profile 🚀
+            </div>
+
+            <div class="profile-buttons">
+
+                <button
+                    class="edit"
+                    onclick="
+                    location.href='/profile-setup'
+                    "
+                >
+                    ✏️ Edit Profile
+                </button>
+
+                <button
+                    class="friends"
+                    onclick="openFriends()"
+                >
+                    👥 Friends
+                </button>
+
+                <button
+                    class="friends"
+                    onclick="openDiscover()"
+                >
+                    🌍 Discover Users
+                </button>
+
+                <button
+                    class="friends"
+                    onclick="switchUser()"
+                    title="Switch to another account"
+                >
+                    🔄 Switch User
+                </button>
+
+                <button class="friends" onclick="openWallet()">💎 Diamonds & Top Up</button>
+
+                <button
+                    class="logout"
+                    onclick="logoutUser()"
+                    title="Log out of Tick Tock"
+                >
+                    🚪 Log Out
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- DISCOVER USERS -->
+<div class="panel-bg" id="discoverPanel">
+    <div class="panel">
+        <div class="panel-head">
+            <h2>🌍 Discover Users</h2>
+            <button class="close" onclick="closeDiscover()">✕</button>
+        </div>
+        <p style="color:#999;font-size:13px;margin:-8px 0 15px;">
+            Follow people on Tick Tock and discover their public Shorts.
+        </p>
+        <div id="discoverUsers" class="discover-grid">
+            Loading users...
+        </div>
+    </div>
+</div>
+
+<!-- FRIENDS -->
+
+<div
+    class="panel-bg"
+    id="friendsPanel"
+>
+
+    <div class="panel">
+
+        <div class="panel-head">
+
+            <h2>👥 Friends</h2>
+
+            <button
+                class="close"
+                onclick="closePanels()"
+            >
+                ✕
+            </button>
+
+        </div>
+
+        <div class="friends-tabs">
+            <button type="button" class="friends-tab active" onclick="showFriendsList()">👥 Friends</button>
+            <button type="button" class="friends-tab" onclick="openFriendsReels()">🎬 Friends Reels</button>
+        </div>
+
+        <div class="search">
+
+            <input
+                id="uidSearch"
+                inputmode="numeric"
+                maxlength="8"
+                placeholder="Enter 8-digit UID"
+            >
+
+            <button onclick="searchUser()">
+                Search
+            </button>
+
+        </div>
+
+        <div id="searchResult"></div>
+
+        <div class="section">
+            📨 Friend Requests
+        </div>
+
+        <div id="requests">
+            Loading...
+        </div>
+
+        <div class="section">
+            💜 My Friends
+        </div>
+
+        <div id="friendList">
+            Loading...
+        </div>
+
+    </div>
+
+</div>
+
+
+<div class="panel-bg" id="friendsReelsPanel">
+  <div class="panel friends-reels-panel">
+    <div class="panel-head"><h2>🎬 Friends Reels</h2><button class="close" type="button" onclick="closePanels()">✕</button></div>
+    <p class="v3-muted">Public Reels posted by your friends.</p>
+    <div id="friendsReelsList" class="friends-reels-list">Loading…</div>
+  </div>
+</div>
+
+<!-- DIAMOND WALLET -->
+<div class="panel-bg" id="walletPanel">
+  <div class="panel">
+    <div class="panel-head"><h2>💎 Diamond Wallet</h2><button class="close" onclick="closeWallet()">✕</button></div>
+    <div style="text-align:center;padding:10px 0 18px">
+      <div style="font-size:46px;font-weight:900" id="diamondBalance">0 💎</div>
+      <div style="color:#999">Use diamonds to send gifts to creators.</div>
+    </div>
+    <h3 style="margin:8px 0">⚡ Top Up</h3>
+    <div id="diamondPacks" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
+    <h3 style="margin:20px 0 8px">🎁 Gifts</h3>
+    <div id="giftCatalog" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
+    <p style="color:#777;font-size:12px;margin-top:16px;text-align:center">Payments are processed through the configured payment gateway. Never share payment secrets in chat.</p>
+  </div>
+</div>
+
+<!-- V3 SEARCH -->
+<div class="panel-bg" id="searchPanel"><div class="panel"><div class="panel-head"><h2>🔎 Search</h2><button class="close" onclick="closePanels()">✕</button></div><div class="search"><input id="globalSearchInput" placeholder="Search users, captions, hashtags..."><button onclick="runGlobalSearch()">Search</button></div><div id="searchResults" style="margin-top:14px"></div></div></div>
+<!-- V3 NOTIFICATIONS -->
+<div class="panel-bg" id="notificationsPanel"><div class="panel"><div class="panel-head"><h2>🔔 Notifications</h2><button class="close" onclick="closePanels()">✕</button></div><div id="notificationsList">Loading...</div></div></div>
+<!-- V3 SAVED -->
+<div class="panel-bg" id="savedPanel"><div class="panel"><div class="panel-head"><h2>🔖 Saved Videos</h2><button class="close" onclick="closePanels()">✕</button></div><div id="savedList">Loading...</div></div></div>
+<!-- V3 CREATOR STATS -->
+<div class="panel-bg" id="statsPanel"><div class="panel"><div class="panel-head"><h2>📊 Creator Studio</h2><button class="close" onclick="closePanels()">✕</button></div><div id="statsGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px"></div><p style="color:#999;margin-top:16px">Your audience and creator performance at a glance.</p></div></div>
+
+<!-- COMMENTS -->
+
+<div
+    class="comments-panel"
+    id="commentsPanel"
+>
+
+    <div class="comments-head">
+
+        <div>
+
+            <h3>💬 Comments</h3>
+
+            <div
+                class="comments-count"
+                id="commentsCount"
+            >
+                0 comments
+            </div>
+
+        </div>
+
+        <button
+            class="close"
+            onclick="closeComments()"
+        >
+            ✕
+        </button>
+
+    </div>
+
+    <div
+        class="comments-list"
+        id="commentsList"
+    >
+    </div>
+
+    <div class="comment-input">
+
+        <input
+            id="commentInput"
+            placeholder="Add a comment..."
+            maxlength="300"
+            onkeydown="
+            if(event.key==='Enter') addComment()
+            "
+        >
+
+        <button onclick="addComment()">
+            ➤
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- LOCATION -->
+
+<div
+    class="location"
+    id="locationBox"
+>
+
+    <h2>📍 Location</h2>
+
+    <p>
+        Allow Tick Tock to use your location
+        for future nearby features.
+    </p>
+
+    <div class="location-buttons">
+
+        <button
+            class="allow"
+            onclick="allowLocation()"
+        >
+            Allow
+        </button>
+
+        <button
+            class="skip"
+            onclick="skipLocation()"
+        >
+            Not Now
+        </button>
+
+    </div>
+
+</div>
+
+
+<script>
+
+let currentCommentVideo = null;
+let soundUnlocked = false;
+
+function genderAvatar(gender, photo, className="creator-avatar"){
+    if(photo){
+        return `<img class="${className}" src="/uploads/${escapeHTML(photo)}" loading="lazy" alt="Profile">`;
+    }
+
+    const g = String(gender || "").toLowerCase();
+
+    /* Lightweight built-in cartoon avatars: no external image request. */
+    const boy = `
+        <svg viewBox="0 0 80 80" aria-label="Boy cartoon" style="width:100%;height:100%;">
+            <circle cx="40" cy="40" r="38" fill="#dbeafe"/>
+            <circle cx="40" cy="39" r="21" fill="#ffd2b3"/>
+            <path d="M19 37c1-20 12-29 23-29 14 0 24 10 21 29l-7-9-4 7-9-9-8 8-6-7z" fill="#3f2a20"/>
+            <circle cx="32" cy="40" r="2.8" fill="#111"/>
+            <circle cx="48" cy="40" r="2.8" fill="#111"/>
+            <path d="M33 51q7 5 14 0" fill="none" stroke="#8b4b3b" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M27 63q13-9 26 0" fill="#4f7cff"/>
+        </svg>`;
+
+    const girl = `
+        <svg viewBox="0 0 80 80" aria-label="Girl cartoon" style="width:100%;height:100%;">
+            <circle cx="40" cy="40" r="38" fill="#fce7f3"/>
+            <circle cx="40" cy="40" r="20" fill="#ffd2b3"/>
+            <path d="M18 39c-3-19 7-31 22-31 17 0 27 14 22 34l-7-5-3 14H28l-4-14z" fill="#3a2720"/>
+            <circle cx="32" cy="40" r="2.8" fill="#111"/>
+            <circle cx="48" cy="40" r="2.8" fill="#111"/>
+            <path d="M33 51q7 5 14 0" fill="none" stroke="#8b4b3b" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M27 64q13-9 26 0" fill="#ff5fa2"/>
+        </svg>`;
+
+    const neutral = `
+        <svg viewBox="0 0 80 80" aria-label="User cartoon" style="width:100%;height:100%;">
+            <circle cx="40" cy="40" r="38" fill="#e5e7eb"/>
+            <circle cx="40" cy="38" r="20" fill="#ffd2b3"/>
+            <path d="M20 36c1-18 10-27 20-27 12 0 21 9 20 27l-6-8-6 6-8-7-8 7z" fill="#4b5563"/>
+            <circle cx="32" cy="40" r="2.8" fill="#111"/>
+            <circle cx="48" cy="40" r="2.8" fill="#111"/>
+            <path d="M33 51q7 5 14 0" fill="none" stroke="#8b4b3b" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M27 64q13-9 26 0" fill="#7c8cff"/>
+        </svg>`;
+
+    const svg =
+        (g === "male" || g === "boy" || g === "m") ? boy :
+        (g === "female" || g === "girl" || g === "f") ? girl :
+        neutral;
+
+    return `<div class="${className}" style="overflow:hidden;display:flex;align-items:center;justify-content:center;">${svg}</div>`;
+}
+
+function closeDiscover(){
+    const panel=document.getElementById("discoverPanel");
+    if(panel) panel.style.display="none";
+}
+
+async function openDiscover(){
+    closePanels();
+    document.getElementById("discoverPanel").style.display="block";
+
+    const box=document.getElementById("discoverUsers");
+    box.innerHTML="Loading users...";
+
+    try{
+        const response=await fetch("/api/users",{cache:"no-store"});
+        const users=await response.json();
+
+        if(!Array.isArray(users) || !users.length){
+            box.innerHTML=`<div style="color:#888;text-align:center;padding:30px;">No other users yet.</div>`;
+            return;
+        }
+
+        box.innerHTML="";
+
+        users.forEach(user=>{
+            const card=document.createElement("div");
+            card.className="discover-card";
+
+            const username="@"+String(user.username||"").split("@")[0];
+            const gender=user.gender || "Profile";
+
+            card.innerHTML=`
+                ${genderAvatar(user.gender,user.photo,"creator-avatar")}
+                <div class="discover-info">
+                    <strong>${escapeHTML(username)}</strong>
+                    <small>${escapeHTML(gender)} · ${user.followers_count||0} followers</small>
+                </div>
+                <button class="${user.is_following ? "following" : ""}"
+                        onclick="toggleFollow('${escapeHTML(user.uid)}',this)">
+                    ${user.is_following ? "Following ✓" : "Follow"}
+                </button>`;
+
+            box.appendChild(card);
+        });
+    }catch(error){
+        console.log(error);
+        box.innerHTML=`<div style="color:#f88;padding:20px;">Could not load users.</div>`;
+    }
+}
+
+async function toggleFollow(uid,button){
+    try{
+        button.disabled=true;
+
+        const response=await fetch(
+            "/api/follow/"+encodeURIComponent(uid),
+            {method:"POST"}
+        );
+
+        const data=await response.json();
+
+        if(data.success){
+            button.textContent=data.following
+                ? "Following ✓"
+                : "Follow";
+
+            button.classList.toggle(
+                "following",
+                data.following
+            );
+
+            const mini = button.classList.contains("follow-mini");
+            if(mini && data.followers_count !== undefined){
+                const row=button.parentElement;
+                const count=row.querySelector(".creator-followers");
+                if(count) count.textContent=data.followers_count+" followers";
+            }
+        }
+    }catch(error){
+        console.log(error);
+    }finally{
+        button.disabled=false;
+    }
+}
+
+
+
+function openCreateReel(){
+    document.getElementById("createReelPanel").style.display = "block";
+}
+
+function closeCreateReel(){
+    document.getElementById("createReelPanel").style.display = "none";
+}
+
+function chooseHomeVideo(){
+    closeCreateReel();
+    document.getElementById("homeVideoPicker").click();
+}
+
+document.getElementById("homeVideoPicker").addEventListener("change", function(){
+    const file = this.files && this.files[0];
+    if(!file) return;
+    window.recordedReelFile = file;
+    const preview = document.getElementById("recordedPreview");
+    if(window.homeGalleryPreviewUrl) URL.revokeObjectURL(window.homeGalleryPreviewUrl);
+    window.homeGalleryPreviewUrl = URL.createObjectURL(file);
+    preview.src = window.homeGalleryPreviewUrl;
+    document.getElementById("recordCaption").value = "";
+    document.getElementById("recordTags").value = "";
+    setRecordPrivacy("public");
+    document.getElementById("recordReviewPanel").style.display = "block";
+    preview.load();
+});
+
+/* ==========================================
+   ENTER
+========================================== */
+
+function enterApp(){
+
+    soundUnlocked = true;
+
+    document.getElementById(
+        "gate"
+    ).style.display = "none";
+
+    document.getElementById(
+        "locationBox"
+    ).style.display = "block";
+
+    startCurrentVideoWithSound();
+
+}
+
+
+/* ==========================================
+   ACCOUNT + REFRESH
+========================================== */
+
+function switchUser(){
+    window.location.href = "/switch-account";
+}
+
+function logoutUser(){
+    if(confirm("Log out of Tick Tock?")){
+        window.location.href = "/logout";
+    }
+}
+
+async function refreshReels(){
+
+    const button = document.getElementById("refreshBtn");
+
+    if(button){
+        button.disabled = true;
+        button.textContent = "⏳";
+    }
+
+    try{
+        await fetch("/api/refresh", {method:"POST"});
+        await loadVideos();
+        document.getElementById("feed").scrollTop = 0;
+    }catch(error){
+        console.log(error);
+        alert("Could not refresh Reels.");
+    }finally{
+        if(button){
+            button.disabled = false;
+            button.textContent = "🔄";
+        }
+    }
+}
+
+function startCurrentVideoWithSound(){
+
+    const videos = document.querySelectorAll(".reel video");
+
+    if(!videos.length) return;
+
+    const first = videos[0];
+
+    document.querySelectorAll(".reel video").forEach(v => {
+        v.muted = true;
+        v.pause();
+    });
+
+    first.muted = false;
+    first.volume = 1;
+
+    first.play().catch(error => {
+        console.log("Sound autoplay was blocked:", error);
+    });
+}
+
+function openUploadMenu(){
+    document.getElementById("uploadSourcePanel").style.display = "block";
+}
+
+function closeUploadMenu(){
+    document.getElementById("uploadSourcePanel").style.display = "none";
+}
+
+function openMyUpload(){
+    window.location.href = "/upload";
+}
+
+function showFriendsReels(){
+    closeUploadMenu();
+    openFriends();
+}
+
+async function showInternetReels(){
+    closeUploadMenu();
+    await refreshReels();
+}
+
+
+let cameraStream = null;
+let mediaRecorder = null;
+let recordedChunks = [];
+let recordPrivacy = "public";
+
+function openCreateReel(){
+    document.getElementById("createReelPanel").style.display = "block";
+}
+
+function closeCreateReel(){
+    document.getElementById("createReelPanel").style.display = "none";
+}
+
+async function openCamera(){
+    closeCreateReel();
+    document.getElementById("cameraPanel").style.display = "block";
+    await startCamera();
+}
+
+async function startCamera(){
+    try{
+        if(cameraStream) cameraStream.getTracks().forEach(t => t.stop());
+
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+            video:true,
+            audio:true
+        });
+
+        const preview = document.getElementById("cameraPreview");
+        preview.srcObject = cameraStream;
+
+        document.getElementById("startRecordBtn").style.display = "none";
+        document.getElementById("recordBtn").style.display = "block";
+        document.getElementById("cameraStatus").textContent =
+            "Camera ready. Press Start Recording.";
+    }catch(error){
+        document.getElementById("cameraStatus").textContent =
+            "Camera permission was denied or camera is unavailable.";
+        alert("Please allow camera and microphone permission.");
+    }
+}
+
+function toggleRecording(){
+    const btn = document.getElementById("recordBtn");
+
+    if(mediaRecorder && mediaRecorder.state === "recording"){
+        mediaRecorder.stop();
+        btn.textContent = "🔴 Start Recording";
+        document.getElementById("cameraStatus").textContent =
+            "Recording finished. Preparing your Reel...";
+        return;
+    }
+
+    recordedChunks = [];
+    const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+        ? "video/webm;codecs=vp9,opus"
+        : "video/webm";
+
+    mediaRecorder = new MediaRecorder(cameraStream, {mimeType:mime});
+
+    mediaRecorder.ondataavailable = e => {
+        if(e.data.size > 0) recordedChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, {type:"video/webm"});
+        window.recordedReelFile = new File(
+            [blob],
+            "ticktock_camera_reel.webm",
+            {type:"video/webm"}
+        );
+
+        const preview = document.getElementById("recordedPreview");
+        preview.src = URL.createObjectURL(blob);
+
+        closeCamera();
+        document.getElementById("recordReviewPanel").style.display = "block";
+        document.getElementById("cameraStatus").textContent =
+            "Recording finished. Preview your Reel before posting.";
+    };
+
+    mediaRecorder.start();
+    btn.textContent = "⏹️ Stop Recording";
+    document.getElementById("cameraStatus").textContent =
+        "🔴 Recording... Press Stop Recording when finished.";
+}
+
+function closeCamera(){
+    if(cameraStream){
+        cameraStream.getTracks().forEach(t => t.stop());
+        cameraStream = null;
+    }
+    document.getElementById("cameraPanel").style.display = "none";
+}
+
+
+function setRecordPrivacy(value){
+    window.recordPrivacy = value;
+    const pub = document.getElementById("recordPublicBtn");
+    const pri = document.getElementById("recordPrivateBtn");
+    const status = document.getElementById("recordPrivacyStatus");
+    if(value === "private"){
+        pri.style.opacity = "1"; pub.style.opacity = ".55";
+        status.textContent = "Private — this Reel will stay out of the public Home feed.";
+    }else{
+        pub.style.opacity = "1"; pri.style.opacity = ".55";
+        status.textContent = "Public — can appear in the Home feed.";
+    }
+}
+
+function showUploadProgress(){const p=document.getElementById('uploadProgressPanel');if(p)p.style.display='block';document.getElementById('uploadProgressBar').style.width='0%';document.getElementById('uploadProgressPercent').textContent='0%';document.getElementById('uploadProgressStatus').textContent='Uploading…';document.getElementById('uploadProgressText').textContent='Uploading your Reel…';document.getElementById('uploadSuccessBox').style.display='none';}
+function cancelUploadProgress(){document.getElementById('uploadProgressPanel').style.display='none';}
+function uploadFileWithProgress(file,caption,tags,privacy,onDone){showUploadProgress();const xhr=new XMLHttpRequest(),data=new FormData();data.append('video',file,file.name||'ticktock_reel.webm');data.append('caption',caption);data.append('tags',tags);data.append('privacy',privacy);xhr.open('POST','/upload',true);xhr.upload.onprogress=e=>{if(!e.lengthComputable)return;const n=Math.round(e.loaded/e.total*100);document.getElementById('uploadProgressBar').style.width=n+'%';document.getElementById('uploadProgressPercent').textContent=n+'%';document.getElementById('uploadProgressText').textContent=n<100?'Uploading your Reel…':'Processing your Reel…'};xhr.onload=()=>{if(xhr.status>=200&&xhr.status<400){document.getElementById('uploadProgressBar').style.width='100%';document.getElementById('uploadProgressPercent').textContent='100%';document.getElementById('uploadProgressStatus').textContent='Complete';document.getElementById('uploadSuccessBox').style.display='block';document.getElementById('recordReviewPanel').style.display='none';window.recordedReelFile=null;setTimeout(()=>{cancelUploadProgress();loadVideos();document.getElementById('feed')?.scrollTo({top:0,behavior:'smooth'});if(onDone)onDone();},900)}else{document.getElementById('uploadProgressStatus').textContent='Failed';alert('Could not upload the Reel. Please try again.')}};xhr.onerror=()=>{document.getElementById('uploadProgressStatus').textContent='Failed';alert('Network error while uploading. Please try again.')};xhr.send(data);}
+function postRecordedReel(){if(!window.recordedReelFile){alert('No video available.');return;}const button=document.querySelector('#recordReviewPanel button.primary:last-of-type');if(button){button.disabled=true;button.textContent='⏳ Uploading…';}uploadFileWithProgress(window.recordedReelFile,document.getElementById('recordCaption').value.trim(),document.getElementById('recordTags').value.trim(),window.recordPrivacy||'public',()=>{if(button){button.disabled=false;button.textContent='🚀 Post Reel';}});}
+
+function cancelRecording(){
+    document.getElementById("recordReviewPanel").style.display = "none";
+    window.recordedReelFile = null;
+    document.getElementById("recordCaption").value = "";
+    document.getElementById("recordTags").value = "";
+    document.getElementById("homeVideoPicker").value = "";
+    if(window.homeGalleryPreviewUrl){ URL.revokeObjectURL(window.homeGalleryPreviewUrl); window.homeGalleryPreviewUrl=null; }
+}
+
+/* ==========================================
+   LOCATION
+========================================== */
+
+function allowLocation(){
+
+    if(!navigator.geolocation){
+
+        skipLocation();
+        return;
+
+    }
+
+    navigator.geolocation.getCurrentPosition(
+
+        function(position){
+
+            console.log(
+                "Location permission granted."
+            );
+
+            console.log(
+                position.coords.latitude,
+                position.coords.longitude
+            );
+
+            document.getElementById(
+                "locationBox"
+            ).style.display = "none";
+
+        },
+
+        function(){
+
+            document.getElementById(
+                "locationBox"
+            ).style.display = "none";
+
+        }
+
+    );
+
+}
+
+
+function skipLocation(){
+
+    document.getElementById(
+        "locationBox"
+    ).style.display = "none";
+
+}
+
+
+/* ==========================================
+   PANELS
+========================================== */
+
+function closePanels(){
+    document.querySelectorAll('.panel-bg').forEach(function(panel){
+        panel.style.display = 'none';
+    });
+}
+
+
+
+function closeComments(){
+
+    document.getElementById(
+        "commentsPanel"
+    ).style.display = "none";
+
+}
+
+
+/* ==========================================
+   PROFILE
+========================================== */
+
+async function copyMyUid(){
+    const uid=document.getElementById("myUid")?.dataset.uid || "";
+    copyText(uid);
+}
+
+function openProfile(){
+
+    closePanels();
+
+    document.getElementById(
+        "profilePanel"
+    ).style.display = "block";
+
+    try{
+
+        const response =
+            await fetch("/api/me");
+
+        const data =
+            await response.json();
+
+        if(!data.success) return;
+
+        const user = data.user;
+
+        document.getElementById(
+            "myUsername"
+        ).textContent =
+            "@" +
+            user.username.split("@")[0];
+
+        const displayUid = user.friend_uid || user.uid || "—";
+        document.getElementById("myUid").textContent = "UID: " + displayUid;
+        document.getElementById("myUid").dataset.uid = displayUid;
+
+        document.getElementById(
+            "myBio"
+        ).textContent =
+            user.bio ||
+            "Welcome to my Tick Tock profile 🚀";
+
+        if(user.photo){
+
+            document.getElementById(
+                "myAvatar"
+            ).innerHTML =
+                `<img
+                src="/uploads/${user.photo}"
+                class="avatar"
+                >`;
+
+        }
+
+    }catch(error){
+
+        console.log(error);
+
+    }
+
+}
+
+
+/* ==========================================
+   FRIENDS
+========================================== */
+
+function openFriends(){
+
+    closePanels();
+
+    document.getElementById(
+        "profilePanel"
+    ).style.display = "none";
+
+    document.getElementById(
+        "friendsPanel"
+    ).style.display = "block";
+
+    loadFriendRequests();
+    loadFriends();
+
+}
+
+
+async function searchUser(){
+
+    const uid = document.getElementById("uidSearch").value.trim();
+    if(!/^\d{8}$/.test(uid)){ alert("Enter the 8-digit UID."); return; }
+
+    if(!uid){
+
+        alert("Enter a UID first.");
+        return;
+
+    }
+
+    const box =
+        document.getElementById(
+            "searchResult"
+        );
+
+    box.innerHTML = "Searching...";
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/user/" +
+                encodeURIComponent(uid)
+            );
+
+        const data =
+            await response.json();
+
+        if(!data.success){
+
+            box.innerHTML =
+                `<div class="user-card">
+                ❌ User not found
+                </div>`;
+
+            return;
+
+        }
+
+        const user = data.user;
+
+        let avatar;
+
+        if(user.photo){
+
+            avatar =
+                `<img
+                src="/uploads/${user.photo}"
+                class="user-avatar"
+                >`;
+
+        }else{
+
+            avatar =
+                `<div
+                class="user-avatar"
+                style="
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                font-size:22px;
+                "
+                >👤</div>`;
+
+        }
+
+        box.innerHTML =
+            `<div class="user-card">
+
+                ${avatar}
+
+                <div class="user-info">
+
+                    <strong>
+                        @${user.username.split("@")[0]}
+                    </strong>
+
+                    <small>
+                        ${user.uid}
+                    </small>
+
+                </div>
+
+                <button
+                    onclick="sendFriend('${user.friend_uid || user.uid}')"
+                >
+                    ➕ Add
+                </button>
+
+            </div>`;
+
+    }catch(error){
+
+        box.innerHTML =
+            "Search failed.";
+
+        console.log(error);
+
+    }
+
+}
+
+
+async function sendFriend(uid){
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/friend-request/" +
+                encodeURIComponent(uid),
+                {
+                    method:"POST"
+                }
+            );
+
+        const data =
+            await response.json();
+
+        alert(data.message);
+
+    }catch(error){
+
+        alert("Something went wrong.");
+
+    }
+
+}
+
+
+/* ==========================================
+   REQUESTS
+========================================== */
+
+async function loadFriendRequests(){
+
+    const box =
+        document.getElementById(
+            "requests"
+        );
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/friend-requests"
+            );
+
+        const requests =
+            await response.json();
+
+        if(!requests.length){
+
+            box.innerHTML =
+                `<div
+                style="
+                color:#777;
+                padding:10px;
+                "
+                >
+                No pending requests.
+                </div>`;
+
+            return;
+
+        }
+
+        box.innerHTML = "";
+
+        requests.forEach(req => {
+
+            let avatar;
+
+            if(req.photo){
+
+                avatar =
+                    `<img
+                    src="/uploads/${req.photo}"
+                    class="user-avatar"
+                    >`;
+
+            }else{
+
+                avatar =
+                    `<div
+                    class="user-avatar"
+                    style="
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    "
+                    >👤</div>`;
+
+            }
+
+            box.innerHTML +=
+                `<div class="user-card">
+
+                    ${avatar}
+
+                    <div class="user-info">
+
+                        <strong>
+                            @${req.username.split("@")[0]}
+                        </strong>
+
+                        <small>
+                            ${req.uid}
+                        </small>
+
+                    </div>
+
+                    <button
+                        class="accept"
+                        onclick="acceptRequest(${req.id})"
+                    >
+                        ✓
+                    </button>
+
+                    <button
+                        class="reject"
+                        onclick="rejectRequest(${req.id})"
+                    >
+                        ✕
+                    </button>
+
+                </div>`;
+
+        });
+
+    }catch(error){
+
+        box.innerHTML =
+            "Could not load requests.";
+
+    }
+
+}
+
+
+async function acceptRequest(id){
+
+    const response =
+        await fetch(
+            "/api/friend-request/" +
+            id +
+            "/accept",
+            {
+                method:"POST"
+            }
+        );
+
+    const data =
+        await response.json();
+
+    alert(data.message);
+
+    loadFriendRequests();
+    loadFriends();
+
+}
+
+
+async function rejectRequest(id){
+
+    await fetch(
+        "/api/friend-request/" +
+        id +
+        "/reject",
+        {
+            method:"POST"
+        }
+    );
+
+    loadFriendRequests();
+
+}
+
+
+/* ==========================================
+   FRIEND LIST
+========================================== */
+
+async function loadFriends(){
+
+    const box =
+        document.getElementById(
+            "friendList"
+        );
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/friends"
+            );
+
+        const friends =
+            await response.json();
+
+        if(!friends.length){
+
+            box.innerHTML =
+                `<div
+                style="
+                color:#777;
+                padding:10px;
+                "
+                >
+                No friends yet.
+                </div>`;
+
+            return;
+
+        }
+
+        box.innerHTML = "";
+
+        friends.forEach(friend => {
+
+            let avatar;
+
+            if(friend.photo){
+
+                avatar =
+                    `<img
+                    src="/uploads/${friend.photo}"
+                    class="user-avatar"
+                    >`;
+
+            }else{
+
+                avatar =
+                    `<div
+                    class="user-avatar"
+                    style="
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    "
+                    >👤</div>`;
+
+            }
+
+            box.innerHTML +=
+                `<div class="user-card">
+
+                    ${avatar}
+
+                    <div class="user-info">
+
+                        <strong>
+                            @${friend.username.split("@")[0]}
+                        </strong>
+
+                        <small>
+                            ${friend.uid}
+                        </small>
+
+                    </div>
+
+                    <button
+                        class="reject"
+                        onclick="
+                        removeFriend('${friend.uid}')
+                        "
+                    >
+                        Remove
+                    </button>
+
+                </div>`;
+
+        });
+
+    }catch(error){
+
+        box.innerHTML =
+            "Could not load friends.";
+
+    }
+
+}
+
+
+async function removeFriend(uid){
+
+    if(!confirm(
+        "Remove this friend?"
+    )) return;
+
+    const response =
+        await fetch(
+            "/api/friend/remove/" +
+            encodeURIComponent(uid),
+            {
+                method:"POST"
+            }
+        );
+
+    const data =
+        await response.json();
+
+    alert(data.message);
+
+    loadFriends();
+
+}
+
+
+/* ==========================================
+   COMMENTS
+========================================== */
+
+async function openComments(videoId){
+
+    currentCommentVideo = videoId;
+
+    document.getElementById(
+        "commentsPanel"
+    ).style.display = "flex";
+
+    await loadComments(videoId);
+
+}
+
+
+async function loadComments(videoId){
+
+    const list =
+        document.getElementById(
+            "commentsList"
+        );
+
+    list.innerHTML =
+        `<div
+        style="
+        text-align:center;
+        color:#777;
+        padding:20px;
+        "
+        >
+        Loading comments...
+        </div>`;
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/comments/" +
+                encodeURIComponent(videoId)
+            );
+
+        const comments =
+            await response.json();
+
+        document.getElementById(
+            "commentsCount"
+        ).textContent =
+            comments.length +
+            (
+                comments.length === 1
+                ? " comment"
+                : " comments"
+            );
+
+        if(!comments.length){
+
+            list.innerHTML =
+                `<div
+                style="
+                text-align:center;
+                color:#777;
+                padding:40px 10px;
+                "
+                >
+                Be the first to comment 💬
+                </div>`;
+
+            return;
+
+        }
+
+        list.innerHTML = "";
+
+        comments.forEach(comment => {
+
+            const item =
+                document.createElement(
+                    "div"
+                );
+
+            item.className =
+                "comment-item";
+
+            item.innerHTML =
+                `<div class="comment-avatar">
+                    👤
+                </div>
+
+                <div class="comment-body">
+
+                    <div class="comment-user">
+                        @${comment.username.split("@")[0]}
+                    </div>
+
+                    <div class="comment-text">
+                        ${escapeHTML(comment.comment)}
+                    </div>
+
+                </div>`;
+
+            list.appendChild(item);
+
+        });
+
+    }catch(error){
+
+        list.innerHTML =
+            "Could not load comments.";
+
+        console.log(error);
+
+    }
+
+}
+
+
+async function addComment(){
+
+    const input =
+        document.getElementById(
+            "commentInput"
+        );
+
+    const text =
+        input.value.trim();
+
+    if(!text) return;
+
+    if(!currentCommentVideo) return;
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/comment/" +
+                encodeURIComponent(
+                    currentCommentVideo
+                ),
+                {
+                    method:"POST",
+                    headers:{
+                        "Content-Type":
+                            "application/json"
+                    },
+                    body:JSON.stringify({
+                        comment:text
+                    })
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if(data.success){
+
+            input.value = "";
+
+            await loadComments(
+                currentCommentVideo
+            );
+
+        }else{
+
+            alert(
+                data.message ||
+                "Comment failed."
+            );
+
+        }
+
+    }catch(error){
+
+        alert("Could not add comment.");
+
+    }
+
+}
+
+
+function escapeHTML(text){
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+    div.textContent = text;
+
+    return div.innerHTML;
+
+}
+
+
+/* ==========================================
+   LIKES
+========================================== */
+
+async function loadLikeStates(videos){
+    try{
+        const ids = videos.map(v => v.id).filter(Boolean);
+        if(!ids.length) return;
+
+        const response = await fetch("/api/like-status?ids=" + encodeURIComponent(ids.join(",")));
+        if(!response.ok) return;
+
+        const states = await response.json();
+        document.querySelectorAll(".action[data-like-video-id]").forEach(button => {
+            const id = button.getAttribute("data-like-video-id");
+            const state = states[id];
+            if(!state) return;
+
+            const circle = button.querySelector(".circle");
+            const label = button.querySelector("small");
+            if(circle) circle.textContent = state.liked ? "💖" : "❤️";
+            if(label) label.textContent = state.count + (state.count === 1 ? " Like" : " Likes");
+        });
+    }catch(error){
+        console.log("Like state loading failed:", error);
+    }
+}
+
+async function likeVideo(button,videoId){
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/like/" +
+                encodeURIComponent(videoId),
+                {
+                    method:"POST"
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if(data.success){
+
+            button.querySelector(
+                ".circle"
+            ).textContent =
+                data.liked
+                ? "💖"
+                : "❤️";
+
+            const label =
+                button.querySelector(
+                    "small"
+                );
+
+            label.textContent =
+                data.count +
+                (
+                    data.count === 1
+                    ? " Like"
+                    : " Likes"
+                );
+
+        }
+
+    }catch(error){
+
+        console.log(error);
+
+    }
+
+}
+
+
+/* ==========================================
+   SHARE
+========================================== */
+
+async function shareVideo(videoId){
+
+    const link =
+        window.location.origin +
+        "/home?video=" +
+        encodeURIComponent(videoId);
+
+    if(navigator.share){
+
+        try{
+
+            await navigator.share({
+                title:"Tick Tock",
+                text:"Check this Reel on Tick Tock!",
+                url:link
+            });
+
+        }catch(error){}
+
+    }else{
+
+        try{
+
+            await navigator.clipboard.writeText(
+                link
+            );
+
+            alert("Link copied! 🔗");
+
+        }catch(error){
+
+            alert(link);
+
+        }
+
+    }
+
+}
+
+
+/* ==========================================
+   SOUND
+========================================== */
+
+function toggleSound(button){
+
+    const reel =
+        button.closest(".reel");
+
+    const video =
+        reel.querySelector("video");
+
+    video.muted =
+        !video.muted;
+
+    button.querySelector(
+        ".circle"
+    ).textContent =
+        video.muted
+        ? "🔇"
+        : "🔊";
+
+}
+
+
+/* ==========================================
+   VIDEO FEED
+========================================== */
+
+let videoLoadPromise = null;
+
+async function loadVideos(force=false){
+
+    const feed=document.getElementById("feed");
+    const hasFeed=feed && feed.querySelector(".reel");
+
+    if(!force && videoLoadPromise){
+        return videoLoadPromise;
+    }
+
+    if(!hasFeed){
+        feed.innerHTML=`
+            <div style="height:100vh;display:flex;align-items:center;justify-content:center;
+                        flex-direction:column;gap:12px;color:#aaa;">
+                <div style="font-size:34px;">🎬</div>
+                <strong style="color:#fff;">Loading Tick Tock…</strong>
+                <small>Preparing your feed</small>
+            </div>`;
+    }
+
+    videoLoadPromise=(async()=>{
+        try{
+            /* User uploads and Pixabay videos are requested together. */
+            const [videoResponse,uploadResponse]=await Promise.all([
+                fetch("/api/videos",{cache:"no-store"}),
+                fetch("/api/uploads",{cache:"no-store"})
+            ]);
+
+            if(!videoResponse.ok || !uploadResponse.ok){
+                throw new Error("Feed request failed");
+            }
+
+            const [pixabay,uploads]=await Promise.all([
+                videoResponse.json(),
+                uploadResponse.json()
+            ]);
+
+            const data=[
+                ...(Array.isArray(uploads)?uploads:[]),
+                ...(Array.isArray(pixabay)?pixabay:[])
+            ];
+
+            if(!data.length){
+                feed.innerHTML=`<div style="height:100vh;display:flex;align-items:center;justify-content:center;">No videos available 😔</div>`;
+                return;
+            }
+
+            /* Fast Fisher-Yates shuffle. */
+            for(let i=data.length-1;i>0;i--){
+                const j=Math.floor(Math.random()*(i+1));
+                [data[i],data[j]]=[data[j],data[i]];
+            }
+
+            const fragment=document.createDocumentFragment();
+
+            data.forEach(item=>{
+                const reel=document.createElement("div");
+                reel.className="reel";
+
+                const creator=item.creator||"ticktock";
+                const title=item.title||"Indian Reel 🇮🇳";
+
+                reel.innerHTML=`
+                    <video
+                        src="${item.url}"
+                        loop
+                        playsinline
+                        muted
+                        preload="metadata"
+                    ></video>
+
+                    <div class="side">
+                        <div class="action"
+                             data-like-video-id="${escapeHTML(String(item.id))}"
+                             onclick="likeVideo(this,'${item.id}')">
+                            <div class="circle">❤️</div>
+                            <small>0 Likes</small>
+                        </div>
+
+                        <div class="action"
+                             onclick="openComments('${item.id}')">
+                            <div class="circle">💬</div>
+                            <small>Comment</small>
+                        </div>
+
+                        <div class="action"
+                             onclick="shareVideo('${item.id}')">
+                            <div class="circle">↗️</div>
+                            <small>Share</small>
+                        </div>
+
+                        <div class="action"
+                             onclick="toggleSound(this)">
+                            <div class="circle">🔇</div>
+                            <small>Sound</small>
+                        </div>
+                    </div>
+
+                    <div class="bottom-info">
+                        <div class="creator-row">
+                            ${genderAvatar(item.creator_gender,item.creator_photo,"creator-avatar")}
+
+                            <div style="flex:1;min-width:0;">
+                                <div class="creator">@${escapeHTML(creator)}</div>
+                                <div class="creator-followers" style="font-size:11px;color:#ddd;">
+                                    ${item.creator_uid ? (item.creator_followers||0)+" followers" : "Tick Tock"}
+                                </div>
+                            </div>
+
+                            ${item.creator_uid ? `
+                            <button class="follow-mini ${item.is_following ? "following" : ""}"
+                                    onclick="toggleFollow('${escapeHTML(item.creator_uid)}',this)">
+                                ${item.is_following ? "Following ✓" : "Follow"}
+                            </button>
+                            <button class="follow-mini" style="margin-left:6px"
+                                    onclick="openGiftForReel('${escapeHTML(item.creator_uid)}','${escapeHTML(String(item.id))}')">
+                                🎁 Gift
+                            </button>` : ""}
+                        </div>
+
+                        <div class="caption">
+                            ${escapeHTML(title)}
+                        </div>
+
+                        <div class="sound">
+                            🎵 Tick Tock
+                        </div>
+                    </div>`;
+
+                fragment.appendChild(reel);
+            });
+
+            feed.innerHTML="";
+            feed.appendChild(fragment);
+
+            loadLikeStates(data);
+            setupObserver();
+
+            if(soundUnlocked){
+                startCurrentVideoWithSound();
+            }
+
+        }catch(error){
+            console.log(error);
+
+            if(!hasFeed){
+                feed.innerHTML=`
+                    <div style="height:100vh;display:flex;align-items:center;justify-content:center;
+                                flex-direction:column;gap:10px;">
+                        <div style="font-size:32px;">😔</div>
+                        <strong>Video loading failed</strong>
+                        <small style="color:#999;">Please try refresh.</small>
+                    </div>`;
+            }
+        }finally{
+            videoLoadPromise=null;
+        }
+    })();
+
+    return videoLoadPromise;
+}
+
+
+/* ==========================================
+   AUTOPLAY
+========================================== */
+
+function setupObserver(){
+
+    const observer =
+        new IntersectionObserver(
+            entries => {
+
+                entries.forEach(entry => {
+
+                    const video =
+                        entry.target.querySelector(
+                            "video"
+                        );
+
+                    if(entry.isIntersecting){
+
+                        document
+                            .querySelectorAll(
+                                ".reel video"
+                            )
+                            .forEach(v => {
+
+                                if(v !== video){
+                                    v.pause();
+                                }
+
+                            });
+
+                        video.muted = !soundUnlocked;
+
+                        video.play().catch(
+                            () => {
+
+                                video.muted = true;
+
+                                video.play();
+
+                            }
+                        );
+
+                    }else{
+
+                        video.pause();
+
+                    }
+
+                });
+
+            },
+            {
+                threshold:.65
+            }
+        );
+
+    document
+        .querySelectorAll(".reel")
+        .forEach(reel => {
+
+            observer.observe(reel);
+
+        });
+
+}
+
+
+/* ==========================================
+   DIAMONDS / TOP UP / GIFTS
+========================================== */
+let walletOpen=false;
+function closeWallet(){ const p=document.getElementById("walletPanel"); if(p)p.style.display="none"; walletOpen=false; }
+async function openWallet(){
+    closePanels(); closeDiscover();
+    const p=document.getElementById("walletPanel"); if(p)p.style.display="block"; walletOpen=true;
+    await loadWallet();
+}
+async function loadWallet(){
+    try{
+        const r=await fetch("/api/diamonds",{cache:"no-store"});
+        const d=await r.json();
+        if(!d.success){ alert(d.message||"Please login again."); return; }
+        document.getElementById("diamondBalance").textContent=(d.balance||0)+" 💎";
+        const packs=document.getElementById("diamondPacks"); packs.innerHTML="";
+        Object.entries(d.packs||{}).forEach(([id,p])=>{
+            const b=document.createElement("button"); b.className="friends"; b.style.padding="14px";
+            b.innerHTML=`💎 ${p.diamonds}<br><small>₹${p.rupees}</small>`;
+            b.onclick=()=>buyDiamonds(id,p); packs.appendChild(b);
+        });
+        const gifts=document.getElementById("giftCatalog"); gifts.innerHTML="";
+        Object.entries(d.gifts||{}).forEach(([id,g])=>{
+            const b=document.createElement("button"); b.className="friends"; b.style.padding="14px"; b.dataset.gift=id;
+            b.innerHTML=`${g.emoji} ${g.name}<br><small>${g.diamonds} 💎</small>`;
+            b.onclick=()=>sendGiftFromProfile(id); gifts.appendChild(b);
+        });
+    }catch(e){ console.log(e); }
+}
+async function buyDiamonds(packId,pack){
+    try{
+        const r=await fetch("/api/diamonds/create-order",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pack:packId})});
+        const d=await r.json();
+        if(!r.ok || !d.success){ alert(d.message||"Top Up is not configured yet."); return; }
+        const options={key:d.key_id,amount:d.amount,currency:d.currency,name:"Tick Tock",description:`${d.diamonds} Diamonds`,order_id:d.order_id,
+            handler:async function(resp){
+                const vr=await fetch("/api/diamonds/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...resp,diamonds:d.diamonds})});
+                const vd=await vr.json(); alert(vd.message||"Payment complete"); if(vd.success)loadWallet();
+            },theme:{color:"#7957ff"}};
+        if(!window.Razorpay){ alert("Payment window could not load. Refresh and try again."); return; }
+        new Razorpay(options).open();
+    }catch(e){ alert("Top Up failed. Please try again."); }
+}
+async function sendGiftFromProfile(giftId){
+    const uid=prompt("Enter the creator UID to send this gift:");
+    if(!uid)return;
+    try{
+        const r=await fetch("/api/gifts/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({uid:uid.trim(),gift:giftId})});
+        const d=await r.json(); alert(d.message||"Done"); if(d.success)loadWallet();
+    }catch(e){alert("Gift could not be sent.");}
+}
+function openGiftForReel(uid,videoId){
+    openWallet().then(()=>{
+        const catalog=document.getElementById("giftCatalog");
+        catalog.querySelectorAll("button").forEach(b=>{
+            b.onclick=()=>sendGift(uid,videoId,b.dataset.gift||"");
+        });
+    });
+}
+async function sendGift(uid,videoId,giftId){
+    if(!giftId){ alert("Choose a gift from the wallet."); return; }
+    try{
+        const r=await fetch("/api/gifts/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({uid:uid,video_id:videoId,gift:giftId})});
+        const d=await r.json(); alert(d.message||"Done"); if(d.success)loadWallet();
+    }catch(e){alert("Gift could not be sent.");}
+}
+
+function mobileHome(){
+    closePanels();
+    const feed=document.getElementById('feed');
+    if(feed) feed.scrollTo({top:0,behavior:'smooth'});
+}
+function openMobileMore(){ showPanel('mobileMorePanel'); }
+function showFriendsList(){closePanels();const p=document.getElementById('friendsPanel');if(p)p.style.display='block';loadFriendRequests();loadFriends();}
+async function openFriendsReels(){closePanels();const p=document.getElementById('friendsReelsPanel');if(p)p.style.display='block';const box=document.getElementById('friendsReelsList');if(!box)return;box.innerHTML='Loading friends Reels…';try{const r=await fetch('/api/friend-reels',{cache:'no-store'});const d=await r.json();if(!Array.isArray(d)||!d.length){box.innerHTML='<div class="v3-muted">No public Reels from friends yet.</div>';return;}box.innerHTML=d.map(v=>`<article class="friend-reel-card"><div class="friend-reel-head">${v.photo?`<img class="mini-avatar" src="/uploads/${escapeHTML(v.photo)}">`:`<div class="mini-avatar"></div>`}<div style="flex:1"><b>@${escapeHTML((v.username||v.creator||'user').split('@')[0])}</b><div class="v3-muted">UID ${escapeHTML(v.creator_friend_uid||v.creator_uid||'')}</div></div><button class="copy-uid" onclick="copyText('${escapeHTML(v.creator_friend_uid||v.creator_uid||'')}')">Copy UID</button></div><video src="${escapeHTML(v.url)}" controls playsinline preload="metadata"></video><p>${escapeHTML(v.caption||'')}</p></article>`).join('');}catch(e){box.innerHTML='<div class="v3-muted">Could not load friends Reels.</div>';}}
+function copyText(text){if(!text)return;navigator.clipboard?.writeText(text).then(()=>alert('Copied UID: '+text)).catch(()=>prompt('Copy UID',text));}
+
+/* ==========================================
+   V3 FEATURES
+========================================== */
+function showPanel(id){ closePanels(); const p=document.getElementById(id); if(p){ p.style.display='block'; } }
+function openSearch(){showPanel('searchPanel'); setTimeout(()=>document.getElementById('globalSearchInput')?.focus(),80)}
+async function runGlobalSearch(){const q=(document.getElementById('globalSearchInput')?.value||'').trim();const box=document.getElementById('searchResults');if(!q){box.innerHTML='<div class="v3-muted">Type something to search.</div>';return}box.innerHTML='Searching...';try{const r=await fetch('/api/search?q='+encodeURIComponent(q));const d=await r.json();let html='';if(d.users?.length){html+='<h3 style="margin:8px 0">👤 Users</h3>';d.users.forEach(u=>{html+=`<div class="v3-card v3-row">${genderAvatar(u.gender,u.photo,'creator-avatar')}<div style="flex:1"><b>@${escapeHTML((u.username||'').split('@')[0])}</b><div class="v3-muted">${escapeHTML(u.uid||'')}</div></div><button class="v3-action" onclick="toggleFollow('${escapeHTML(u.uid)}',this)">Follow</button></div>`})}if(d.videos?.length){html+='<h3 style="margin:16px 0 8px">🎬 Videos</h3>';d.videos.forEach(v=>{html+=`<div class="v3-card"><b>${escapeHTML(v.title||'Untitled')}</b><div class="v3-muted">${escapeHTML(v.caption||'')} ${escapeHTML(v.tags||'')}</div><button class="v3-action" style="margin-top:10px" onclick="closePanels();document.getElementById('feed')?.scrollTo(0,0)">Watch feed</button></div>`})}box.innerHTML=html||'<div class="v3-muted">No results found.</div>'}catch(e){box.innerHTML='Search failed. Try again.'}}
+function openNotifications(){showPanel('notificationsPanel');loadNotifications()}
+async function loadNotifications(){const b=document.getElementById('notificationsList');try{const r=await fetch('/api/notifications',{cache:'no-store'});const d=await r.json();const badge=document.getElementById('notifBadge');if(d.unread){badge.textContent=d.unread;badge.style.display='inline-block';const mb=document.getElementById('mobileNotifBadge');if(mb){mb.textContent=d.unread>99?'99+':d.unread;mb.style.display='inline-flex'}}else {badge.style.display='none';const mb=document.getElementById('mobileNotifBadge');if(mb)mb.style.display='none'};b.innerHTML=d.notifications?.length?d.notifications.map(n=>`<div class="v3-card"><b>${escapeHTML(n.message)}</b><div class="v3-muted">${escapeHTML(n.created_at||'')}</div></div>`).join(''):'<div class="v3-muted">No notifications yet 🔕</div>';await fetch('/api/notifications/read',{method:'POST'})}catch(e){b.innerHTML='Could not load notifications.'}}
+function openSaved(){showPanel('savedPanel');loadSaved()}
+async function loadSaved(){const b=document.getElementById('savedList');try{const r=await fetch('/api/bookmarks',{cache:'no-store'});const d=await r.json();b.innerHTML=d.length?d.map(v=>`<div class="v3-card"><b>${escapeHTML(v.title||'Saved video')}</b><div class="v3-muted">${escapeHTML(v.caption||'')}</div><button class="v3-action" onclick="bookmarkVideo('${escapeHTML(v.video_id)}',this)">Remove 🔖</button></div>`).join(''):'<div class="v3-muted">No saved videos yet. Tap 🔖 on a video to save one.</div>'}catch(e){b.innerHTML='Could not load saved videos.'}}
+async function bookmarkVideo(videoId,button){try{const r=await fetch('/api/bookmark/'+encodeURIComponent(videoId),{method:'POST'});const d=await r.json();if(d.login_required){location.href='/login';return}if(button)button.textContent=d.saved?'Saved 🔖':'Save 🔖';}catch(e){}}
+async function openCreatorStats(){showPanel('statsPanel');const b=document.getElementById('statsGrid');b.innerHTML='Loading...';try{const d=await (await fetch('/api/creator-stats')).json();b.innerHTML=[['Followers',d.followers],['Following',d.following],['Videos',d.videos],['Views',d.views],['Gift diamonds',d.gift_diamonds]].map(x=>`<div class="v3-stat"><b>${x[1]||0}</b><span class="v3-muted">${x[0]}</span></div>`).join('')}catch(e){b.innerHTML='Could not load stats.'}}
+function reportVideo(videoId,uid){const reason=prompt('Report reason: Spam, Harassment, Nudity, Violence, Copyright, or Other','Other');if(!reason)return;fetch('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({video_id:videoId,uid:uid,reason:reason})}).then(r=>r.json()).then(d=>alert(d.message||'Report sent.'))}
+
+// Reliable panel controls: tap outside or press Escape to close.
+document.querySelectorAll('.panel-bg').forEach(function(panel){
+    panel.addEventListener('click', function(event){
+        if(event.target === panel){ closePanels(); }
+    });
+});
+document.addEventListener('keydown', function(event){
+    if(event.key === 'Escape'){ closePanels(); }
+});
+
+/* ==========================================
+   START
+========================================== */
+
+loadVideos();
+
+// V3: lightweight unread polling
+setInterval(()=>{fetch('/api/notifications',{cache:'no-store'}).then(r=>r.json()).then(d=>{const b=document.getElementById('notifBadge');if(!b)return;if(d.unread){b.textContent=d.unread;b.style.display='inline-block';const mb=document.getElementById('mobileNotifBadge');if(mb){mb.textContent=d.unread>99?'99+':d.unread;mb.style.display='inline-flex'}}else {b.style.display='none';const mb=document.getElementById('mobileNotifBadge');if(mb)mb.style.display='none'}}).catch(()=>{})},30000);
+</script>
+
+</body>
+</html>
