@@ -1,0 +1,17 @@
+{
+  "name": "Tick Tock",
+  "short_name": "Tick Tock",
+  "start_url": "/home",
+  "display": "standalone",
+  "background_color": "#020306",
+  "theme_color": "#18a8ff",
+  "description": "Short-video social platform",
+  "icons": [
+    {
+      "src": "/static/ticktock-logo.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
