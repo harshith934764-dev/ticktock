@@ -1,0 +1,3308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Tick Tock</title>
+<link rel="manifest" href="/static/manifest.webmanifest?v=8">
+<meta name="theme-color" content="#08080f">
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    font-family:Arial,sans-serif;
+}
+
+body{
+    background:#050509;
+    color:white;
+    overflow:hidden;
+}
+
+#feed{
+    height:100vh;
+    overflow-y:auto;
+    overscroll-behavior-y:contain;
+    scroll-behavior:smooth;
+    scroll-snap-type:y mandatory;
+    -webkit-overflow-scrolling:touch;
+}
+
+.reel{
+    height:100vh;
+    position:relative;
+    scroll-snap-align:start;
+    background:#08080f;
+}
+
+.reel video{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+}
+
+.topbar{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    z-index:20;
+    padding:18px 22px;
+    display:flex;
+    justify-content:space-between;
+    background:linear-gradient(
+        rgba(0,0,0,.7),
+        transparent
+    );
+}
+
+.logo{
+    font-size:27px;
+    font-weight:900;
+    flex:0 0 auto;
+    white-space:nowrap;
+}
+
+.logo span{
+    background:linear-gradient(
+        90deg,#ff2d8d,#7957ff,#00d9ff
+    );
+    -webkit-background-clip:text;
+    color:transparent;
+}
+
+.top-buttons{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    max-width:calc(100vw - 115px);
+    overflow-x:auto;
+    overflow-y:hidden;
+    scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+    padding:2px;
+}
+.top-buttons::-webkit-scrollbar{display:none}
+
+.icon-btn{
+    width:43px;
+    height:43px;
+    min-width:43px;
+    flex:0 0 43px;
+    border:0;
+    border-radius:50%;
+    background:rgba(20,20,35,.8);
+    color:white;
+    font-size:21px;
+    cursor:pointer;
+}
+
+.side{
+    position:absolute;
+    right:15px;
+    bottom:90px;
+    z-index:5;
+    display:flex;
+    flex-direction:column;
+    gap:17px;
+}
+
+.action{
+    width:55px;
+    text-align:center;
+    cursor:pointer;
+}
+
+.circle{
+    width:49px;
+    height:49px;
+    border-radius:50%;
+    background:rgba(0,0,0,.55);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:22px;
+}
+
+.action small{
+    font-size:11px;
+    margin-top:4px;
+    display:block;
+}
+
+.bottom-info{
+    position:absolute;
+    left:18px;
+    right:85px;
+    bottom:25px;
+    z-index:5;
+    text-shadow:0 2px 8px #000;
+}
+
+.creator{
+    font-size:18px;
+    font-weight:bold;
+    margin-bottom:7px;
+}
+
+.caption{
+    font-size:14px;
+}
+
+.sound{
+    margin-top:7px;
+    font-size:12px;
+}
+
+/* SOUND */
+
+.gate{
+    position:fixed;
+    inset:0;
+    z-index:100;
+    background:#060610;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.gate-card{
+    width:min(420px,90%);
+    padding:35px;
+    border-radius:28px;
+    text-align:center;
+    background:#15152b;
+    box-shadow:0 20px 80px #000;
+}
+
+.gate-card h1{
+    font-size:32px;
+    margin-bottom:10px;
+}
+
+.gate-card p{
+    color:#aaa;
+    margin-bottom:25px;
+}
+
+.primary{
+    width:100%;
+    border:0;
+    padding:15px;
+    border-radius:15px;
+    color:white;
+    font-weight:bold;
+    font-size:16px;
+    background:linear-gradient(
+        90deg,#ff2d8d,#7055ff
+    );
+    cursor:pointer;
+}
+
+.source-card{
+    width:100%;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:16px;
+    border:1px solid #30304b;
+    border-radius:18px;
+    background:#19192b;
+    color:white;
+    text-align:left;
+    cursor:pointer;
+}
+.source-card:hover{
+    background:#252541;
+    transform:translateY(-1px);
+}
+.source-icon{
+    width:48px;
+    height:48px;
+    border-radius:14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:linear-gradient(135deg,#ff2d8d,#7055ff);
+    font-size:24px;
+    flex-shrink:0;
+}
+.source-card strong{
+    display:block;
+    font-size:16px;
+}
+.source-card small{
+    display:block;
+    color:#999;
+    margin-top:4px;
+    font-size:12px;
+}
+
+/* PANELS */
+
+.panel-bg{
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:1000;
+    background:rgba(0,0,0,.7);
+    backdrop-filter:blur(7px);
+}
+
+.panel{
+    position:absolute;
+    z-index:1001;
+    left:50%;
+    bottom:0;
+    transform:translateX(-50%);
+    width:min(620px,100%);
+    max-height:88vh;
+    overflow-y:auto;
+    background:#101020;
+    border-radius:28px 28px 0 0;
+    padding:24px;
+}
+
+.panel-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+    position:sticky;
+    top:0;
+    z-index:10;
+    padding-bottom:8px;
+    background:#101020;
+}
+
+.close{
+    width:40px;
+    min-width:40px;
+    height:40px;
+    border:0;
+    border-radius:50%;
+    background:#292941;
+    color:white;
+    font-size:17px;
+    cursor:pointer;
+}
+
+/* PROFILE */
+
+.profile-card{
+    text-align:center;
+}
+
+.avatar{
+    width:100px;
+    height:100px;
+    border-radius:50%;
+    margin:auto;
+    object-fit:cover;
+    background:linear-gradient(
+        135deg,#ff3c9b,#704cff
+    );
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:42px;
+}
+
+.profile-card h2{
+    margin-top:14px;
+}
+
+.uid{
+    color:#9b8cff;
+    font-size:13px;
+    margin-top:6px;
+}
+
+.bio{
+    color:#aaa;
+    margin:14px 0;
+}
+
+.profile-buttons{
+    display:flex;
+    gap:10px;
+}
+
+.profile-buttons button{
+    flex:1;
+    border:0;
+    border-radius:14px;
+    padding:13px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.edit{
+    background:white;
+    color:#111;
+}
+
+.friends{
+    background:#282844;
+    color:white;
+}
+
+.logout{
+    background:#5a2028;
+    color:#fff;
+}
+
+.profile-buttons{
+    flex-wrap:wrap;
+}
+
+.profile-buttons button{
+    min-width:140px;
+}
+
+/* FRIENDS */
+
+.search{
+    display:flex;
+    gap:8px;
+}
+
+.search input{
+    flex:1;
+    background:#19192d;
+    border:1px solid #30304b;
+    color:white;
+    border-radius:13px;
+    padding:13px;
+    outline:none;
+}
+
+.search button{
+    border:0;
+    border-radius:13px;
+    padding:0 17px;
+    background:#7055ff;
+    color:white;
+    cursor:pointer;
+}
+
+.section{
+    color:#999;
+    font-size:14px;
+    margin:20px 0 9px;
+}
+
+.user-card{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px;
+    background:#19192b;
+    border-radius:16px;
+    margin:8px 0;
+}
+
+.user-avatar{
+    width:48px;
+    height:48px;
+    border-radius:50%;
+    object-fit:cover;
+    background:linear-gradient(
+        135deg,#ff3c9b,#704cff
+    );
+}
+
+.user-info{
+    flex:1;
+}
+
+.user-info strong{
+    display:block;
+}
+
+.user-info small{
+    color:#888;
+}
+
+.user-card button{
+    border:0;
+    border-radius:10px;
+    padding:9px 12px;
+    background:#7055ff;
+    color:white;
+    cursor:pointer;
+}
+
+.accept{
+    background:#13b878 !important;
+}
+
+.reject{
+    background:#34344c !important;
+}
+
+/* PUBLIC SOCIAL UI */
+.creator-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:8px;
+}
+.creator-avatar{
+    width:42px;
+    height:42px;
+    border-radius:50%;
+    object-fit:cover;
+    background:#202035;
+    border:2px solid rgba(255,255,255,.7);
+    flex-shrink:0;
+}
+.follow-mini{
+    border:1px solid rgba(255,255,255,.65);
+    background:rgba(0,0,0,.48);
+    color:#fff;
+    border-radius:999px;
+    padding:7px 12px;
+    font-weight:700;
+    font-size:12px;
+}
+.follow-mini.following{
+    background:#fff;
+    color:#111;
+}
+.discover-grid{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+.discover-card{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px;
+    border:1px solid #2d2d47;
+    border-radius:18px;
+    background:linear-gradient(145deg,#19192b,#12121f);
+}
+.discover-card .discover-info{
+    flex:1;
+    min-width:0;
+}
+.discover-card strong{
+    display:block;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+.discover-card small{
+    color:#9292aa;
+}
+.discover-card button{
+    border:0;
+    border-radius:999px;
+    padding:9px 14px;
+    background:linear-gradient(90deg,#ff2d8d,#7055ff);
+    color:#fff;
+    font-weight:800;
+}
+.discover-card button.following{
+    background:#fff;
+    color:#111;
+}
+
+/* COMMENTS */
+
+.comments-panel{
+    position:fixed;
+    left:50%;
+    bottom:0;
+    transform:translateX(-50%);
+    width:min(620px,100%);
+    height:72vh;
+    background:#11111f;
+    border-radius:28px 28px 0 0;
+    z-index:80;
+    display:none;
+    flex-direction:column;
+    box-shadow:0 -20px 70px #000;
+}
+
+.comments-head{
+    padding:18px 20px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    border-bottom:1px solid #29293d;
+}
+
+.comments-count{
+    color:#888;
+    font-size:13px;
+    margin-top:4px;
+}
+
+.comments-list{
+    flex:1;
+    overflow-y:auto;
+    padding:15px;
+}
+
+.comment-item{
+    display:flex;
+    gap:10px;
+    margin-bottom:17px;
+}
+
+.comment-avatar{
+    width:40px;
+    height:40px;
+    border-radius:50%;
+    background:linear-gradient(
+        135deg,#ff3c9b,#704cff
+    );
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+}
+
+.comment-body{
+    background:#1b1b2d;
+    border-radius:15px;
+    padding:10px 13px;
+    flex:1;
+}
+
+.comment-user{
+    font-weight:bold;
+    font-size:14px;
+}
+
+.comment-text{
+    color:#ccc;
+    margin-top:4px;
+    font-size:14px;
+}
+
+.comment-input{
+    padding:12px;
+    display:flex;
+    gap:8px;
+    border-top:1px solid #29293d;
+}
+
+.comment-input input{
+    flex:1;
+    background:#1b1b2d;
+    border:1px solid #30304b;
+    color:white;
+    border-radius:14px;
+    padding:13px;
+    outline:none;
+}
+
+.comment-input button{
+    width:50px;
+    border:0;
+    border-radius:14px;
+    background:#7055ff;
+    color:white;
+    font-size:19px;
+    cursor:pointer;
+}
+
+/* Mobile keyboard-safe comments */
+.comments-panel{
+    overflow:hidden;
+    padding-bottom:env(safe-area-inset-bottom);
+    touch-action:auto;
+}
+.comments-list{
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+}
+.comment-input{
+    flex:0 0 auto;
+    position:relative;
+    z-index:2;
+    background:#11111f;
+}
+.comment-input input{
+    min-width:0;
+    -webkit-user-select:text;
+    user-select:text;
+    -webkit-appearance:none;
+    appearance:none;
+    touch-action:manipulation;
+}
+.comment-input button{
+    flex:0 0 50px;
+    touch-action:manipulation;
+}
+@media (max-width:700px){
+    .comments-panel{
+        width:100%;
+        height:min(78dvh,680px);
+        max-height:calc(100dvh - env(safe-area-inset-top));
+        border-radius:22px 22px 0 0;
+    }
+    .comments-head{padding:14px 16px;}
+    .comments-list{padding:12px;}
+    .comment-input{padding:10px 10px calc(10px + env(safe-area-inset-bottom));}
+    .comment-input input{font-size:16px; padding:13px 12px;}
+}
+
+/* LOCATION */
+
+.location{
+    display:none;
+    position:fixed;
+    z-index:90;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    width:min(420px,90%);
+    padding:28px;
+    border-radius:24px;
+    text-align:center;
+    background:#151528;
+}
+
+.location p{
+    color:#aaa;
+    margin:12px 0 20px;
+}
+
+.location-buttons{
+    display:flex;
+    gap:10px;
+}
+
+.location-buttons button{
+    flex:1;
+    border:0;
+    border-radius:13px;
+    padding:12px;
+    cursor:pointer;
+}
+
+.allow{
+    background:#7055ff;
+    color:white;
+}
+
+.skip{
+    background:#292940;
+    color:white;
+}
+
+/* FAST / SMOOTH MOBILE PERFORMANCE */
+html{
+    background:#050509;
+    scroll-behavior:smooth;
+}
+body{
+    -webkit-font-smoothing:antialiased;
+    overscroll-behavior:none;
+    -webkit-tap-highlight-color:transparent;
+}
+#feed{
+    overscroll-behavior-y:contain;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+}
+#feed::-webkit-scrollbar{display:none;}
+.reel{
+    contain:layout paint;
+    isolation:isolate;
+    transform:translateZ(0);
+    backface-visibility:hidden;
+}
+.reel video{
+    transform:translateZ(0);
+    backface-visibility:hidden;
+}
+.icon-btn,.circle,.primary,.source-card,.profile-buttons button,.search button,.user-card button{
+    transition:transform .16s ease,opacity .16s ease;
+}
+.icon-btn:active,.circle:active,.primary:active,.source-card:active,.profile-buttons button:active,.search button:active,.user-card button:active{
+    transform:scale(.94);
+}
+@media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto;}
+    *{transition:none!important;animation:none!important;}
+}
+
+
+.v3-card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:14px;margin-bottom:10px}.v3-stat{padding:18px;border-radius:16px;background:rgba(255,255,255,.07);text-align:center}.v3-stat b{display:block;font-size:28px}.v3-muted{color:#aaa;font-size:12px}.v3-row{display:flex;align-items:center;gap:10px}.v3-action{border:0;border-radius:12px;padding:9px 12px;background:#fff;color:#111;font-weight:700}
+ .tt-ai-floating{position:fixed;left:18px;bottom:22px;z-index:9998;border:1px solid #ffffff18;background:#171820e8;color:#fff;border-radius:999px;padding:11px 15px;font-weight:900;box-shadow:0 14px 45px #0008;backdrop-filter:blur(14px)} .tt-ai-floating:hover{transform:translateY(-1px)}
+
+/* V5 SPEED + UX */
+.loading-skeleton{width:min(360px,82vw);display:grid;gap:10px;text-align:center}
+.skeleton-line{height:13px;border-radius:999px;background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(255,255,255,.16),rgba(255,255,255,.06));background-size:200% 100%;animation:sk 1.1s linear infinite}
+.skeleton-line.big{height:28px;width:72%;margin:auto}.skeleton-line.short{width:48%;margin:auto}
+@keyframes sk{to{background-position:-200% 0}}
+.fast-status{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:9999;padding:8px 13px;border-radius:999px;background:rgba(0,0,0,.72);color:#fff;font-size:12px;backdrop-filter:blur(12px);display:none}
+.action.optimistic{transform:scale(1.08)}
+.explore-empty.skeleton{padding:32px 18px}
+
+<style id="tt-v7-loader-css">
+:root{--tt-blue:#18a8ff;--tt-cyan:#2ee6ff;--tt-pink:#ff2d75;--tt-purple:#7b61ff}
+#ttBusy{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 35%,rgba(24,168,255,.16),transparent 32%),rgba(3,5,10,.88);backdrop-filter:blur(18px)}
+#ttBusy.show{display:flex;animation:ttBusyIn .16s ease-out}
+.tt-busy-card{width:min(360px,86vw);padding:30px 24px;text-align:center;border-radius:28px;background:linear-gradient(145deg,rgba(20,25,42,.97),rgba(7,10,18,.98));border:1px solid rgba(46,230,255,.18);box-shadow:0 30px 100px rgba(0,0,0,.7),0 0 70px rgba(24,168,255,.09)}
+.tt-busy-logo{width:min(145px,42vw);height:auto;display:block;margin:0 auto 15px;border-radius:24px;box-shadow:0 0 45px rgba(24,168,255,.14);animation:ttLogoPulse 1.35s ease-in-out infinite}
+.tt-busy-name{font-size:25px;font-weight:950;letter-spacing:-1px;background:linear-gradient(90deg,#fff,var(--tt-cyan),var(--tt-blue),var(--tt-pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+.tt-busy-text{margin-top:7px;color:#c7cfdd;font-size:13px;font-weight:700}.tt-busy-sub{margin-top:4px;color:#707b8f;font-size:11px}
+.tt-busy-track{height:4px;width:170px;margin:18px auto 0;border-radius:99px;background:rgba(255,255,255,.09);overflow:hidden}.tt-busy-track span{display:block;width:45%;height:100%;background:linear-gradient(90deg,var(--tt-blue),var(--tt-cyan),var(--tt-pink));animation:ttLoadV7 1s ease-in-out infinite}
+.tt-loading-btn{opacity:.72!important;pointer-events:none!important}.tt-inline-loader{display:flex;align-items:center;gap:9px;color:#aeb8c8;font-weight:700;font-size:12px}.tt-inline-loader img{width:28px;height:28px;border-radius:8px;animation:ttLogoPulse 1s infinite}
+@keyframes ttBusyIn{from{opacity:0}to{opacity:1}} @keyframes ttLogoPulse{0%,100%{transform:scale(.97);filter:brightness(.95)}50%{transform:scale(1.03);filter:brightness(1.08)}} @keyframes ttLoadV7{0%{transform:translateX(-130%)}100%{transform:translateX(360%)}}
+.tt-brand-mark{display:inline-flex;align-items:center;gap:8px}.tt-brand-mark img{width:30px;height:30px;border-radius:8px;vertical-align:middle}.tt-brand-word{font-weight:950;background:linear-gradient(90deg,#fff,var(--tt-cyan),var(--tt-blue),var(--tt-pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* V8 speed/UI */
+.fast-loading{min-height:100vh;display:grid;place-items:center;background:#050509}.fast-loading-card{text-align:center;padding:28px}.fast-loading-card img{width:96px;height:96px;object-fit:cover;border-radius:22px;display:block;margin:auto;box-shadow:0 0 35px rgba(24,168,255,.15)}.fast-loading-card b{display:block;margin-top:12px;font-size:20px}.fast-loading-card small{display:block;margin-top:6px;color:#8d96a8}.fast-spinner{width:150px;height:4px;margin:16px auto 0;border-radius:99px;background:linear-gradient(90deg,#18a8ff,#2ee6ff,#ff2d75);animation:v8pulse 1s ease-in-out infinite}@keyframes v8pulse{50%{opacity:.45;transform:scaleX(.65)}}
+</style>
+</style>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+<style id="premium-home-ui">
+
+/* TICK TOCK PREMIUM UI — V3.1 */
+:root{--bg:#08090d;--panel:rgba(18,19,25,.88);--panel2:rgba(255,255,255,.055);--line:rgba(255,255,255,.11);--muted:#9b9da8;--text:#f7f7fa;--accent:#8b7cff;--accent2:#b58cff;--good:#62d6a0}
+*{box-sizing:border-box}
+html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;background:var(--bg)!important;color:var(--text)!important}
+button,input,textarea,select{font-family:inherit!important}
+button{transition:transform .18s ease,opacity .18s ease,background .18s ease,border-color .18s ease,box-shadow .18s ease}
+button:active{transform:scale(.98)}
+
+body{background:#050609!important}
+.topbar{padding:16px 20px!important;background:linear-gradient(180deg,rgba(4,5,8,.82),rgba(4,5,8,0))!important;backdrop-filter:blur(8px)!important}.logo{font-size:22px!important;letter-spacing:-.6px!important}.logo span{background:linear-gradient(90deg,#a493ff,#d5c6ff)!important;-webkit-background-clip:text!important;color:transparent!important}
+.icon-btn{width:44px!important;height:44px!important;background:rgba(12,13,18,.78)!important;border:1px solid rgba(255,255,255,.11)!important;box-shadow:0 8px 25px rgba(0,0,0,.22)!important}.icon-btn:hover{background:rgba(28,29,38,.9)!important}
+.side{right:16px!important;bottom:96px!important;gap:14px!important}.action{width:52px!important}.circle{width:48px!important;height:48px!important;background:rgba(8,9,13,.66)!important;border:1px solid rgba(255,255,255,.11)!important;box-shadow:0 8px 25px rgba(0,0,0,.22)!important;backdrop-filter:blur(14px)!important}.action small{color:rgba(255,255,255,.86)!important;font-weight:600!important;text-shadow:0 1px 8px #000!important}
+.bottom-info{left:20px!important;right:90px!important;bottom:28px!important;text-shadow:0 2px 16px #000!important}.creator{font-size:17px!important;letter-spacing:-.2px!important}.caption{font-size:14px!important;color:#eee!important;line-height:1.45!important}.sound{color:#c8c8d0!important}
+.gate{background:rgba(5,6,9,.86)!important;backdrop-filter:blur(24px)!important}.gate-card{background:linear-gradient(180deg,rgba(22,23,30,.97),rgba(11,12,17,.97))!important;border:1px solid var(--line)!important;box-shadow:0 35px 110px rgba(0,0,0,.65)!important;border-radius:30px!important}.gate-card h1{letter-spacing:-1px!important}.gate-card p{color:#9698a4!important}.primary{background:linear-gradient(135deg,#8173ff,#a989ff)!important;box-shadow:0 12px 28px rgba(112,93,255,.2)!important}.source-card{background:rgba(255,255,255,.045)!important;border-color:var(--line)!important;border-radius:20px!important}.source-card:hover{background:rgba(255,255,255,.07)!important}.source-icon{background:linear-gradient(135deg,#8173ff,#a989ff)!important}
+/* common panels/modals used throughout the home page */
+.modal,.panel,.popup,.wallet-panel,.search-panel,.comments-panel,.profile-panel{background:rgba(15,16,22,.96)!important;border:1px solid rgba(255,255,255,.11)!important;box-shadow:0 30px 100px rgba(0,0,0,.6)!important;border-radius:24px!important;backdrop-filter:blur(28px)!important}
+.modal input,.modal textarea,.modal select,.panel input,.panel textarea,.panel select,.popup input,.popup textarea,.popup select{background:#0a0b10!important;border:1px solid rgba(255,255,255,.1)!important;border-radius:15px!important;color:#fff!important}
+.primary,.save,.send,.follow-btn{border-radius:15px!important;box-shadow:0 10px 25px rgba(112,93,255,.16)!important}
+@media(max-width:600px){.topbar{padding:13px 14px!important}.logo{font-size:20px!important}.top-buttons{gap:7px!important}.icon-btn{width:42px!important;height:42px!important}.side{right:10px!important}.bottom-info{left:15px!important;right:78px!important}}
+</style>
+<style id="responsive-device-ui">
+/* Desktop keeps the spacious top command bar. Android gets a dedicated bottom dock. */
+.mobile-nav,.mobile-more-panel{display:none}
+.top-buttons{position:relative}
+@media (min-width: 901px){
+  .topbar{padding-left:32px!important;padding-right:32px!important}
+  .top-buttons{max-width:none!important;overflow:visible!important}
+  .icon-btn{width:46px!important;height:46px!important}
+}
+@media (max-width: 900px){
+  body{padding-bottom:76px!important}
+  .topbar{height:64px!important;padding:10px 12px!important;align-items:center!important}
+  .logo{font-size:20px!important}
+  .top-buttons{display:none!important}
+  .reel video{object-position:center center!important}
+  .side{right:9px!important;bottom:112px!important;gap:10px!important}
+  .action{width:48px!important}
+  .circle{width:44px!important;height:44px!important;font-size:19px!important}
+  .action small{font-size:10px!important}
+  .bottom-info{left:14px!important;right:68px!important;bottom:94px!important}
+  .mobile-nav{position:fixed;display:flex;left:8px;right:8px;bottom:8px;height:62px;z-index:2000;border:1px solid rgba(255,255,255,.12);background:rgba(10,11,16,.88);backdrop-filter:blur(24px);border-radius:22px;box-shadow:0 18px 55px rgba(0,0,0,.55);padding:5px;gap:3px}
+  .mobile-nav button{flex:1;min-width:0;border:0;background:transparent;color:#aaa;border-radius:17px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:20px;cursor:pointer}
+  .mobile-nav button:active{background:rgba(255,255,255,.08);transform:scale(.96)}
+  .mobile-nav small{font-size:9px;font-weight:700;letter-spacing:.2px;color:#b8bac4}
+  .mobile-nav span{position:relative;line-height:20px}
+  #mobileNotifBadge{position:absolute;top:-5px;right:-9px;background:#ff365e;color:#fff;font-style:normal;font-size:8px;min-width:14px;height:14px;border-radius:99px;display:none;align-items:center;justify-content:center;padding:0 3px}
+  .mobile-more-card{width:min(94vw,520px)!important;max-height:82vh!important;overflow:auto!important}
+  .mobile-more-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .mobile-more-grid button{min-height:88px;border:1px solid rgba(255,255,255,.09);border-radius:18px;background:rgba(255,255,255,.05);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;font-size:25px}
+  .mobile-more-grid b{font-size:12px}
+}
+@media (max-width:380px){
+  .mobile-nav{left:5px;right:5px;gap:1px}
+  .mobile-nav small{font-size:8px}
+  .mobile-nav span{font-size:18px}
+  .side{right:6px!important}
+}
+
+.uid-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:6px}.uid-row .uid{margin:0}
+/* V3.2 mobile panels + upload progress + friends reels */
+.upload-progress-card{width:min(560px,calc(100vw - 24px));bottom:50%;transform:translate(-50%,50%);border-radius:28px!important;max-height:none!important}
+.upload-progress-track{height:12px;border-radius:99px;background:#242536;overflow:hidden;margin-top:16px}.upload-progress-bar{height:100%;width:0%;background:linear-gradient(90deg,#7d6cff,#c16cff);transition:width .15s ease}
+.upload-progress-meta{display:flex;justify-content:space-between;margin-top:10px;color:#a9abb8;font-size:13px}.upload-progress-title{font-weight:700}.upload-success{margin-top:16px;padding:13px;border-radius:14px;background:rgba(73,210,145,.12);border:1px solid rgba(73,210,145,.28);color:#83e5b8;font-weight:700}
+.friends-tabs{display:flex;gap:8px;margin:0 0 14px}.friends-tab{flex:1;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.045);color:#aaa;border-radius:14px;padding:11px;font-weight:800}.friends-tab.active{background:rgba(139,124,255,.2);color:#fff;border-color:rgba(139,124,255,.55)}
+.friend-reel-card{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:18px;padding:10px;margin:10px 0}.friend-reel-card video{width:100%;max-height:52vh;object-fit:contain;background:#000;border-radius:14px}.friend-reel-head{display:flex;align-items:center;gap:9px;padding:4px 2px 9px}.friend-reel-head .mini-avatar{width:34px;height:34px;border-radius:50%;object-fit:cover;background:#292941}.friend-reel-head b{font-size:14px}.friend-reel-card p{color:#bbb;margin:9px 2px 2px}.copy-uid{border:0;background:rgba(139,124,255,.16);color:#cfc8ff;border-radius:10px;padding:7px 9px;font-size:11px;font-weight:800;cursor:pointer}
+@media(max-width:900px){.panel-bg{z-index:3000!important;padding:10px!important}.panel{z-index:3001!important;width:100%!important;max-width:720px!important;max-height:calc(100dvh - 20px)!important;min-height:0!important;padding:20px 16px 96px!important;border-radius:26px!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch}.panel-head{background:#101020!important;top:-1px!important;padding:2px 0 12px!important}.close{z-index:20!important}.profile-card{padding-bottom:20px}.profile-buttons{display:grid!important;grid-template-columns:1fr 1fr!important}.profile-buttons button{min-width:0!important;width:100%!important}.friends-reels-panel{padding-bottom:90px!important}.upload-progress-card{bottom:50%!important;transform:translate(-50%,50%)!important;padding-bottom:24px!important}}
+@media(max-width:430px){.panel{padding-left:13px!important;padding-right:13px!important}.profile-buttons{grid-template-columns:1fr 1fr!important;gap:9px!important}.profile-buttons button{font-size:13px!important;padding:12px 7px!important}.friends-tabs{position:sticky;top:48px;z-index:8;background:#101020;padding:5px 0}.search{flex-wrap:nowrap}.search input{min-width:0}.search button{flex:0 0 auto}.friend-reel-card video{max-height:48vh}}
+</style>
+
+<style id="final-responsive-polish">
+/* FINAL responsive polish: desktop and Android use purpose-built layouts. */
+.icon-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;overflow:visible}
+.top-buttons{align-items:center;justify-content:flex-end}
+#feed{scrollbar-width:none}
+#feed::-webkit-scrollbar{display:none}
+.panel-bg{padding:16px}
+.panel{max-width:720px;width:min(720px,100%);max-height:calc(100dvh - 32px);border-radius:26px!important}
+.panel-head{position:sticky;top:0;z-index:10}
+@media (min-width:901px){
+  .topbar{padding:16px 30px!important;background:linear-gradient(rgba(5,5,9,.88),rgba(5,5,9,.18),transparent)!important}
+  .logo{font-size:28px!important;letter-spacing:-.7px}
+  .top-buttons{gap:8px!important;max-width:none!important;overflow:visible!important}
+  .icon-btn{width:44px!important;height:44px!important;min-width:44px!important}
+  .panel-bg{align-items:center;justify-content:center}
+  .panel{position:relative!important;left:auto!important;bottom:auto!important;transform:none!important;margin:auto;max-height:calc(100dvh - 60px)!important}
+  .comments-panel{left:50%!important;transform:translateX(-50%)!important}
+}
+@media (max-width:900px){
+  .panel-bg{padding:8px!important}
+  .panel{max-height:calc(100dvh - 16px)!important;padding-bottom:118px!important}
+  .panel-head{top:-1px!important}
+  .profile-card{padding-bottom:26px!important}
+  .mobile-nav{padding-bottom:env(safe-area-inset-bottom)!important;height:calc(66px + env(safe-area-inset-bottom))!important}
+}
+@media (max-width:430px){
+  .panel{border-radius:24px!important}
+  .panel-head h2{font-size:22px!important}
+  .profile-buttons{gap:8px!important}
+  .profile-buttons button{min-height:48px!important}
+}
+</style>
+
+<style id="creator-profile-ui">
+.creator-click{cursor:pointer;border-radius:14px;padding:3px 5px;margin-left:-5px;transition:background .18s ease}.creator-click:hover{background:rgba(255,255,255,.08)}
+.profile-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}.profile-stat{padding:12px;border-radius:15px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);text-align:center}.profile-stat b{display:block;font-size:20px}.profile-stat span{font-size:11px;color:#999}
+.profile-upload-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}.profile-upload-card{overflow:hidden;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}.profile-upload-card video{width:100%;aspect-ratio:9/14;object-fit:cover;background:#000;display:block}.profile-upload-card .pu-copy{padding:10px}.profile-upload-card .pu-copy b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.profile-upload-card .pu-copy p{margin:5px 0 0;color:#aaa;font-size:12px;line-height:1.35;max-height:34px;overflow:hidden}.profile-empty{padding:28px 12px;text-align:center;color:#888;border:1px dashed rgba(255,255,255,.12);border-radius:18px}
+.public-profile-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}.public-profile-actions button{border:0;border-radius:14px;padding:13px;font-weight:800;cursor:pointer}.profile-follow{background:linear-gradient(90deg,#ff2d8d,#7055ff);color:#fff}.profile-follow.following{background:#fff;color:#111}.profile-view-back{background:#282844;color:#fff}
+@media(max-width:520px){.profile-upload-grid{grid-template-columns:1fr 1fr;gap:9px}.profile-upload-card video{aspect-ratio:9/13}.profile-stats{gap:6px}.profile-stat{padding:10px 5px}}
+@media(min-width:901px){.profile-upload-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.panel{width:min(760px,92vw)}}
+</style>
+<link rel="stylesheet" href="{{ url_for("static", filename="ai_ui.css") }}"><script defer src="{{ url_for("static", filename="ai_ui.js") }}"></script>
+<style id="tt-v6-ui">
+:root{--tt-blue:#18a8ff;--tt-cyan:#2ee6ff;--tt-pink:#ff2d75;--tt-purple:#7b61ff;--tt-bg:#05070d;--tt-card:rgba(14,17,28,.92)}
+body{background:radial-gradient(circle at 50% -10%,rgba(24,168,255,.12),transparent 38%),#05070d}
+.topbar{background:linear-gradient(180deg,rgba(4,7,14,.92),rgba(4,7,14,.42),transparent)!important}
+.logo span{background:linear-gradient(90deg,#fff 0%,#2ee6ff 42%,#18a8ff 72%,#ff2d75 100%)!important;-webkit-background-clip:text!important;color:transparent!important}
+.icon-btn{background:linear-gradient(145deg,rgba(25,31,48,.94),rgba(9,12,22,.94))!important;border:1px solid rgba(46,230,255,.14)!important;box-shadow:0 8px 25px rgba(0,0,0,.2),inset 0 1px rgba(255,255,255,.07);font-size:20px!important}
+.icon-btn:hover{transform:translateY(-2px) scale(1.04);border-color:rgba(46,230,255,.42)!important;box-shadow:0 10px 30px rgba(24,168,255,.16)}
+.tt-new-pill{width:auto!important;min-width:auto!important;padding:0 14px!important;border-radius:999px!important;font-size:12px!important;font-weight:800!important;display:flex;gap:6px;align-items:center}
+.tt-new-pill.blue{background:linear-gradient(135deg,#118ee8,#2ee6ff)!important;color:#04111a!important}
+.tt-new-pill.pink{background:linear-gradient(135deg,#ff2d75,#7b61ff)!important;color:#fff!important}
+.tt-splash{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:#020306;transition:opacity .45s ease,visibility .45s ease}
+.tt-splash.hide{opacity:0;visibility:hidden;pointer-events:none}
+.tt-splash-inner{text-align:center;width:min(390px,82vw);animation:ttSplashIn .7s ease both}
+.tt-splash-logo{width:min(300px,72vw);height:auto;display:block;margin:0 auto 20px;border-radius:28px;box-shadow:0 0 70px rgba(24,168,255,.14)}
+.tt-splash-name{font-size:30px;font-weight:950;letter-spacing:-1.4px;background:linear-gradient(90deg,#fff,#2ee6ff,#18a8ff,#ff2d75);-webkit-background-clip:text;color:transparent}
+.tt-splash-tag{margin-top:7px;color:#9ca5b5;font-size:12px;letter-spacing:3px;text-transform:uppercase}
+.tt-loader{width:170px;height:4px;margin:24px auto 0;border-radius:99px;background:rgba(255,255,255,.09);overflow:hidden}
+.tt-loader span{display:block;width:42%;height:100%;border-radius:99px;background:linear-gradient(90deg,#18a8ff,#2ee6ff,#ff2d75);animation:ttLoad 1.15s ease-in-out infinite}
+.tt-splash-status{margin-top:12px;color:#697386;font-size:11px}
+@keyframes ttLoad{0%{transform:translateX(-140%)}100%{transform:translateX(420%)}}
+@keyframes ttSplashIn{from{opacity:0;transform:scale(.94) translateY(8px)}to{opacity:1;transform:none}}
+.gate{background:radial-gradient(circle at 50% 35%,rgba(24,168,255,.12),transparent 35%),#05070d!important}
+.gate-card{background:linear-gradient(145deg,rgba(20,25,42,.96),rgba(9,12,22,.98))!important;border:1px solid rgba(46,230,255,.15);box-shadow:0 30px 100px rgba(0,0,0,.7),0 0 70px rgba(24,168,255,.08)!important}
+.gate-logo{width:min(220px,65vw);border-radius:22px;display:block;margin:0 auto 18px;box-shadow:0 0 45px rgba(24,168,255,.12)}
+.gate-card h1{font-size:28px!important}
+.primary{background:linear-gradient(135deg,#118ee8,#2ee6ff 52%,#7b61ff)!important;box-shadow:0 12px 30px rgba(24,168,255,.18)}
+.primary:hover{transform:translateY(-1px);filter:brightness(1.06)}
+.mobile-nav{background:rgba(5,7,13,.94)!important;border-top:1px solid rgba(46,230,255,.12)!important;backdrop-filter:blur(18px)!important}
+.mobile-nav button{color:#dce8f6!important}.mobile-nav button span{font-size:22px!important}.mobile-nav button:hover{color:#2ee6ff!important}
+.panel{background:linear-gradient(145deg,rgba(15,18,29,.98),rgba(7,10,18,.98))!important;border-color:rgba(46,230,255,.13)!important}
+.explore-pill{background:linear-gradient(145deg,rgba(24,168,255,.11),rgba(255,45,117,.07))!important;border-color:rgba(46,230,255,.15)!important}
+.tt-home-tabs{position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:19;display:flex;gap:6px;padding:5px;border-radius:999px;background:rgba(5,8,15,.62);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(14px)}
+.tt-home-tabs button{border:0;border-radius:999px;padding:8px 13px;background:transparent;color:#8f99aa;font-weight:800;font-size:12px;cursor:pointer}.tt-home-tabs button.active{color:#fff;background:linear-gradient(135deg,rgba(24,168,255,.8),rgba(123,97,255,.8))}
+@media(max-width:700px){.tt-home-tabs{top:63px}.tt-home-tabs button{padding:7px 11px}.tt-new-pill{padding:0 10px!important}.tt-splash-logo{width:min(260px,72vw)}}
+</style>
+
+<script>
+(function(){
+  function showSplash(){
+    var s=document.getElementById('ttSplash'); if(!s)return;
+    s.classList.remove('hide');
+    window.setTimeout(function(){s.classList.add('hide');},1800);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',showSplash); else showSplash();
+  window.addEventListener('pageshow',function(e){ if(e.persisted) showSplash(); });
+})();
+</script>
+<style id="tt-v8-brand-css">:root{--tt-blue:#18a8ff;--tt-cyan:#2ee6ff;--tt-pink:#ff2d75}.tt-busy{position:fixed;inset:0;z-index:99999;display:none;place-items:center;background:radial-gradient(circle at 50% 35%,rgba(24,168,255,.15),transparent 32%),rgba(3,5,10,.94);backdrop-filter:blur(12px)}.tt-busy.show{display:grid}.tt-busy-card{width:min(370px,88vw);padding:25px 22px;text-align:center;border-radius:28px;background:linear-gradient(145deg,rgba(20,25,42,.985),rgba(7,10,18,.995));border:1px solid rgba(46,230,255,.18);box-shadow:0 30px 100px #000b}.tt-busy-logo{width:min(145px,42vw);height:min(145px,42vw);object-fit:cover;border-radius:24px;display:block;margin:0 auto 14px;box-shadow:0 0 45px rgba(24,168,255,.16);animation:ttPulse 1.25s ease-in-out infinite}.tt-busy-name{font-size:25px;font-weight:950;background:linear-gradient(90deg,#fff,var(--tt-cyan),var(--tt-blue),var(--tt-pink));-webkit-background-clip:text;color:transparent}.tt-busy-text{margin-top:7px;color:#c7cfdd;font-size:13px;font-weight:750;min-height:19px}.tt-busy-sub{margin-top:3px;color:#707b8f;font-size:11px;letter-spacing:.2px}.tt-busy-track{height:4px;width:175px;margin:17px auto 0;border-radius:99px;background:#ffffff17;overflow:hidden}.tt-busy-track span{display:block;width:42%;height:100%;background:linear-gradient(90deg,var(--tt-blue),var(--tt-cyan),var(--tt-pink));animation:ttMove .9s linear infinite}@keyframes ttPulse{50%{transform:scale(1.025)}}@keyframes ttMove{0%{transform:translateX(-150%)}100%{transform:translateX(390%)}}.tt-brand-mark{display:inline-flex;align-items:center;gap:8px;font-weight:950}.tt-brand-mark img{width:32px;height:32px;border-radius:9px;object-fit:cover}</style></head>
+
+<body>
+
+<div id="ttBusy" class="tt-busy" aria-live="polite" aria-busy="false"><div class="tt-busy-card"><img class="tt-busy-logo" src="/static/ticktock-logo.png?v=8" alt="Tick Tock" width="145" height="145"><div class="tt-busy-name">Tick Tock</div><div id="ttBusyText" class="tt-busy-text">Loading…</div><div class="tt-busy-sub">WATCH • SHARE • DISCOVER</div><div class="tt-busy-track"><span></span></div></div></div>
+</div>
+
+<div id="ttSplash" class="tt-splash" aria-label="Tick Tock loading">
+  <div class="tt-splash-inner">
+    <img class="tt-splash-logo" src="{{ url_for('static', filename='ticktock-logo.png') }}" alt="Tick Tock">
+    <div class="tt-splash-name">Tick Tock</div>
+    <div class="tt-splash-tag">Watch • Share • Discover</div>
+    <div class="tt-loader" aria-hidden="true"><span></span></div>
+    <div class="tt-splash-status">Loading your feed…</div>
+  </div>
+</div>
+<div id="fastStatus" class="fast-status" aria-live="polite"></div><button class="tt-ai-floating" onclick="openTickTockAI()" aria-label="Open Tick Tock AI">✨ AI</button>
+<form id="homeUploadForm" method="POST" action="/upload" enctype="multipart/form-data" style="display:none;">
+    <input id="homeVideoPicker" type="file" name="video" accept="video/*">
+    <input id="homeCaption" type="hidden" name="caption">
+    <input id="homeTags" type="hidden" name="tags">
+    <input id="homePrivacy" type="hidden" name="privacy" value="public">
+</form>
+
+<div id="uploadProgressPanel" class="panel-bg" style="z-index:5000;">
+  <div class="panel upload-progress-card">
+    <div class="panel-head"><h2>Uploading Reel</h2><button class="close" type="button" onclick="cancelUploadProgress()">✕</button></div>
+    <div class="upload-progress-title" id="uploadProgressText">Preparing your video…</div>
+    <div class="upload-progress-track"><div id="uploadProgressBar" class="upload-progress-bar"></div></div>
+    <div class="upload-progress-meta"><span id="uploadProgressPercent">0%</span><span id="uploadProgressStatus">Uploading…</span></div>
+    <div id="uploadSuccessBox" class="upload-success" style="display:none;">✓ Successfully uploaded. Your Reel is now in Home.</div>
+  </div>
+</div>
+
+<div id="recordReviewPanel" class="panel-bg">
+    <div class="panel">
+        <div class="panel-head">
+            <h2>🎬 Preview Reel</h2>
+            <button class="close" type="button" onclick="cancelRecording()">✕</button>
+        </div>
+        <video id="recordedPreview" controls playsinline
+               style="width:100%;max-height:55vh;background:#000;border-radius:18px;"></video>
+
+        <label style="display:block;margin-top:16px;margin-bottom:7px;font-weight:bold;">Caption</label>
+        <textarea id="recordCaption" maxlength="500" placeholder="Write a caption..."
+                  style="width:100%;min-height:85px;padding:12px;border-radius:13px;
+                         background:#19192b;color:white;border:1px solid #30304b;resize:vertical;"></textarea>
+
+        <label style="display:block;margin-top:14px;margin-bottom:7px;font-weight:bold;">Tags / Hashtags</label>
+        <input id="recordTags" maxlength="500" type="text" placeholder="#india #cricket #fun"
+               style="width:100%;padding:12px;border-radius:13px;background:#19192b;color:white;border:1px solid #30304b;">
+
+        <label style="display:block;margin-top:14px;margin-bottom:7px;font-weight:bold;">Who can watch this video?</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <button type="button" id="recordPublicBtn" class="primary" onclick="setRecordPrivacy('public')">🌍 Public</button>
+            <button type="button" id="recordPrivateBtn" class="secondary" onclick="setRecordPrivacy('private')">🔒 Private</button>
+        </div>
+        <p id="recordPrivacyStatus" style="color:#aaa;font-size:13px;margin:10px 0 0;">Public — can appear in the Home feed.</p>
+
+        <button type="button" class="primary" onclick="postRecordedReel()" style="margin-top:12px;">🚀 Post Reel</button>
+    </div>
+</div>
+
+<div id="cameraPanel" class="panel-bg">
+    <div class="panel" style="text-align:center;">
+        <div class="panel-head">
+            <h2>🎥 Create Reel</h2>
+            <button class="close" type="button" onclick="closeCamera()">✕</button>
+        </div>
+        <video id="cameraPreview" autoplay playsinline
+               style="width:100%;max-height:55vh;background:#000;border-radius:18px;"></video>
+        <div style="display:flex;gap:10px;margin-top:15px;">
+            <button type="button" class="primary" id="startRecordBtn"
+                    onclick="startCamera()">📷 Start Camera</button>
+            <button type="button" class="primary" id="recordBtn"
+                    onclick="toggleRecording()" style="display:none;">🔴 Start Recording</button>
+        </div>
+        <p id="cameraStatus" style="color:#aaa;margin-top:12px;">
+            Choose Camera to record a new Reel.
+        </p>
+    </div>
+</div>
+
+
+<!-- CREATE REEL CHOOSER -->
+<div class="panel-bg" id="createReelPanel">
+    <div class="panel">
+        <div class="panel-head">
+            <h2>➕ Create Reel</h2>
+            <button class="close" type="button" onclick="closeCreateReel()">✕</button>
+        </div>
+
+        <button type="button" class="source-card" onclick="openCamera()">
+            <span class="source-icon">📷</span>
+            <span>
+                <strong>Camera</strong>
+                <small>Record a new Reel with camera + microphone</small>
+            </span>
+        </button>
+
+        <button type="button" class="source-card"
+                onclick="chooseHomeVideo()"
+                style="margin-top:12px;">
+            <span class="source-icon">🎬</span>
+            <span>
+                <strong>Choose Video</strong>
+                <small>Select a video from your laptop</small>
+            </span>
+        </button>
+</div>
+</div>
+
+<!-- SOUND GATE -->
+
+<div class="gate" id="gate">
+
+    <div class="gate-card">
+
+        <img class="gate-logo" src="{{ url_for('static', filename='ticktock-logo.png') }}" alt="Tick Tock logo">
+
+        <h1>Welcome to Tick Tock</h1>
+
+        <p>
+            Enter your feed with sound enabled.
+        </p>
+
+        <button
+            id="enterAppBtn"
+            class="primary"
+            type="button"
+            onclick="enterApp()"
+        >
+            🔊 Enter with Sound
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- TOP -->
+
+<div class="topbar">
+
+    <div class="logo">
+        <span>Tick Tock</span>
+    </div>
+
+    <div class="top-buttons">
+
+        <button
+            class="icon-btn"
+            onclick="refreshReels()"
+            title="Refresh Reels"
+            id="refreshBtn"
+        >
+            🔄
+        </button>
+
+        <button
+            class="icon-btn"
+            type="button"
+            onclick="openCreateReel()"
+            title="Create Reel"
+        >
+            ➕
+        </button>
+
+        <button
+            class="icon-btn"
+            onclick="openFriends()"
+            title="Friends"
+        >
+            👥
+        </button>
+
+        <button class="icon-btn" onclick="openWallet()" title="Diamonds & Top Up" aria-label="Diamonds">💎</button>
+        <button class="icon-btn" onclick="openExplore()" title="Explore" aria-label="Explore">🔍</button>
+        <button class="icon-btn" onclick="openSearch()" title="Search" aria-label="Search">🔎</button>
+        <button class="icon-btn" onclick="openNotifications()" title="Notifications">🔔<span id="notifBadge" style="display:none;position:absolute;margin:-8px 0 0 -10px;background:#ff2d55;border-radius:99px;padding:2px 5px;font-size:10px">0</span></button>
+        <button class="icon-btn" onclick="openSaved()" title="Saved videos">🔖</button>
+        <button class="icon-btn" onclick="openCreatorStats()" title="Creator stats">📊</button>
+
+
+        <button class="icon-btn tt-new-pill blue" type="button" onclick="openExplore()" title="Trending">🔥 <span>Trending</span></button>
+        <button class="icon-btn tt-new-pill pink" type="button" onclick="openTickTockAI()" title="Tick Tock AI">✨ <span>AI</span></button>
+
+        <button
+            class="icon-btn"
+            onclick="switchUser()"
+            title="Switch User"
+            aria-label="Switch User"
+        >
+            🔄
+        </button>
+
+        <button
+            class="icon-btn"
+            onclick="openProfile()"
+        >
+            👤
+        </button>
+
+    </div>
+
+</div>
+
+
+<div class="tt-home-tabs" aria-label="Feed filters">
+  <button class="active" type="button" onclick="mobileHome()">For You</button>
+  <button type="button" onclick="openExplore()">Explore</button>
+  <button type="button" onclick="openSaved()">Saved</button>
+</div>
+
+<!-- MOBILE NAVIGATION: purpose-built for Android phones -->
+<div class="mobile-nav" aria-label="Mobile navigation">
+  <button type="button" onclick="mobileHome()"><span>⌂</span><small>Home</small></button>
+  <button type="button" onclick="openCreateReel()"><span>＋</span><small>Create</small></button>
+  <button type="button" onclick="openExplore()"><span>⌖</span><small>Explore</small></button>
+  <button type="button" onclick="openSearch()"><span>⌕</span><small>Search</small></button>
+  <button type="button" onclick="openNotifications()"><span>♧<i id="mobileNotifBadge">0</i></span><small>Alerts</small></button>
+  <button type="button" onclick="openProfile()"><span>◉</span><small>Profile</small></button>
+  <button type="button" onclick="openMobileMore()"><span>•••</span><small>More</small></button>
+</div>
+
+<div class="panel-bg mobile-more-panel" id="mobileMorePanel">
+  <div class="panel mobile-more-card">
+    <div class="panel-head"><h2>More</h2><button class="close" type="button" onclick="closePanels()">✕</button></div>
+    <div class="mobile-more-grid">
+      <button onclick="showFriendsList()">👥<b>Friends</b></button>
+      <button onclick="openWallet()">💎<b>Diamonds</b></button>
+      <button onclick="openSaved()">🔖<b>Saved</b></button>
+      <button onclick="openCreatorStats()">📊<b>Creator Studio</b></button>
+      <button onclick="switchUser()">🔄<b>Switch User</b></button>
+      <button onclick="refreshReels();closePanels()">↻<b>Refresh Feed</b></button>
+    </div>
+  </div>
+</div>
+
+<!-- FEED -->
+
+<div id="feed"></div>
+
+
+<!-- PROFILE -->
+
+<div
+    class="panel-bg"
+    id="profilePanel"
+>
+
+    <div class="panel">
+
+        <div class="panel-head">
+
+            <h2>My Profile</h2>
+
+            <button
+                class="close"
+                onclick="closePanels()"
+            >
+                ✕
+            </button>
+
+        </div>
+
+        <div class="profile-card">
+
+            <div
+                id="myAvatar"
+                class="avatar"
+            >
+                👤
+            </div>
+
+            <h2 id="myUsername">
+                Loading...
+            </h2>
+
+            <div class="uid-row">
+                <div class="uid" id="myUid">UID</div>
+                <button type="button" class="copy-uid" onclick="copyMyUid()">Copy</button>
+            </div>
+
+            <div
+                class="bio"
+                id="myBio"
+            >
+                Welcome to my Tick Tock profile 🚀
+            </div>
+
+            <div class="profile-buttons">
+
+                <button
+                    class="edit"
+                    onclick="
+                    location.href='/profile-setup'
+                    "
+                >
+                    ✏️ Edit Profile
+                </button>
+
+                <button
+                    class="friends"
+                    onclick="openFriends()"
+                >
+                    👥 Friends
+                </button>
+
+                <button
+                    class="friends"
+                    onclick="openDiscover()"
+                >
+                    🌍 Discover Users
+                </button>
+
+                <button
+                    class="friends"
+                    onclick="switchUser()"
+                    title="Switch to another account"
+                >
+                    🔄 Switch User
+                </button>
+
+                <button class="friends" onclick="openWallet()">💎 Diamonds & Top Up</button>
+
+                <button
+                    class="logout"
+                    onclick="logoutUser()"
+                    title="Log out of Tick Tock"
+                >
+                    🚪 Log Out
+                </button>
+
+            </div>
+
+            <div class="section" style="text-align:left;margin-top:24px;">🎬 Your uploads</div>
+            <div id="myUploads" class="profile-upload-grid">
+                <div class="profile-empty" style="grid-column:1/-1;">Loading your Reels…</div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- PUBLIC CREATOR PROFILE -->
+<div class="panel-bg" id="publicProfilePanel">
+  <div class="panel">
+    <div class="panel-head"><h2>👤 Creator Profile</h2><button class="close" type="button" onclick="closePanels()">✕</button></div>
+    <div class="profile-card">
+      <div id="publicAvatar" class="avatar">👤</div>
+      <h2 id="publicUsername">Loading…</h2>
+      <div class="uid" id="publicUid">UID</div>
+      <div class="bio" id="publicBio">—</div>
+      <div class="profile-stats">
+        <div class="profile-stat"><b id="publicFollowers">0</b><span>Followers</span></div>
+        <div class="profile-stat"><b id="publicFollowing">0</b><span>Following</span></div>
+        <div class="profile-stat"><b id="publicVideos">0</b><span>Reels</span></div>
+      </div>
+      <div class="public-profile-actions">
+        <button id="publicFollowBtn" class="profile-follow">Follow</button>
+        <button class="profile-view-back" type="button" onclick="closePanels()">Back to Feed</button>
+      </div>
+      <div class="section" style="text-align:left;margin-top:10px;">🎬 Public Reels</div>
+      <div id="publicUploads" class="profile-upload-grid">
+        <div class="profile-empty" style="grid-column:1/-1;">Loading Reels…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- DISCOVER USERS -->
+<div class="panel-bg" id="discoverPanel">
+    <div class="panel">
+        <div class="panel-head">
+            <h2>🌍 Discover Users</h2>
+            <button class="close" onclick="closeDiscover()">✕</button>
+        </div>
+        <p style="color:#999;font-size:13px;margin:-8px 0 15px;">
+            Follow people on Tick Tock and discover their public Shorts.
+        </p>
+        <div id="discoverUsers" class="discover-grid">
+            Loading users...
+        </div>
+    </div>
+</div>
+
+<!-- EXPLORE -->
+<div class="panel-bg" id="explorePanel">
+  <div class="panel explore-panel">
+    <div class="panel-head">
+      <h2>🔍 Explore</h2>
+      <button class="close" type="button" onclick="closePanels()">✕</button>
+    </div>
+    <div class="explore-search-row">
+      <input id="exploreQuery" class="explore-input" placeholder="Search people, hashtags or videos..." autocomplete="off">
+      <button class="v3-action" type="button" onclick="runExploreSearch()">Search</button>
+    </div>
+    <div id="exploreContent" class="explore-content">Loading Explore…</div>
+  </div>
+</div>
+
+<!-- FRIENDS -->
+
+<div
+    class="panel-bg"
+    id="friendsPanel"
+>
+
+    <div class="panel">
+
+        <div class="panel-head">
+
+            <h2>👥 Friends</h2>
+
+            <button
+                class="close"
+                onclick="closePanels()"
+            >
+                ✕
+            </button>
+
+        </div>
+
+        <div class="friends-tabs">
+            <button type="button" class="friends-tab active" onclick="showFriendsList()">👥 Friends</button>
+            <button type="button" class="friends-tab" onclick="openFriendsReels()">🎬 Friends Reels</button>
+        </div>
+
+        <div class="search">
+
+            <input
+                id="uidSearch"
+                inputmode="numeric"
+                maxlength="8"
+                placeholder="Enter 8-digit UID"
+            >
+
+            <button onclick="searchUser()">
+                Search
+            </button>
+
+        </div>
+
+        <div id="searchResult"></div>
+
+        <div class="section">
+            📨 Friend Requests
+        </div>
+
+        <div id="requests">
+            Loading...
+        </div>
+
+        <div class="section">
+            💜 My Friends
+        </div>
+
+        <div id="friendList">
+            Loading...
+        </div>
+
+    </div>
+
+</div>
+
+
+<div class="panel-bg" id="friendsReelsPanel">
+  <div class="panel friends-reels-panel">
+    <div class="panel-head"><h2>🎬 Friends Reels</h2><button class="close" type="button" onclick="closePanels()">✕</button></div>
+    <p class="v3-muted">Public Reels posted by your friends.</p>
+    <div id="friendsReelsList" class="friends-reels-list">Loading…</div>
+  </div>
+</div>
+
+<!-- DIAMOND WALLET -->
+<div class="panel-bg" id="walletPanel">
+  <div class="panel">
+    <div class="panel-head"><h2>💎 Diamond Wallet</h2><button class="close" onclick="closeWallet()">✕</button></div>
+    <div style="text-align:center;padding:10px 0 18px">
+      <div style="font-size:46px;font-weight:900" id="diamondBalance">0 💎</div>
+      <div style="color:#999">Use diamonds to send gifts to creators.</div>
+    </div>
+    <h3 style="margin:8px 0">⚡ Top Up</h3>
+    <div id="diamondPacks" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
+    <h3 style="margin:20px 0 8px">🎁 Gifts</h3>
+    <div id="giftCatalog" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
+    <p style="color:#777;font-size:12px;margin-top:16px;text-align:center">Payments are processed through the configured payment gateway. Never share payment secrets in chat.</p>
+  </div>
+</div>
+
+<!-- V3 SEARCH -->
+<div class="panel-bg" id="searchPanel"><div class="panel"><div class="panel-head"><h2>🔎 Search</h2><button class="close" onclick="closePanels()">✕</button></div><div class="search"><input id="globalSearchInput" placeholder="Search users, captions, hashtags..."><button onclick="runGlobalSearch()">Search</button></div><div id="searchResults" style="margin-top:14px"></div></div></div>
+<!-- V3 NOTIFICATIONS -->
+<div class="panel-bg" id="notificationsPanel"><div class="panel"><div class="panel-head"><h2>🔔 Notifications</h2><button class="close" onclick="closePanels()">✕</button></div><div id="notificationsList">Loading...</div></div></div>
+<!-- V3 SAVED -->
+<div class="panel-bg" id="savedPanel"><div class="panel"><div class="panel-head"><h2>🔖 Saved Videos</h2><button class="close" onclick="closePanels()">✕</button></div><div id="savedList">Loading...</div></div></div>
+<!-- V3 CREATOR STATS -->
+<div class="panel-bg" id="statsPanel"><div class="panel"><div class="panel-head"><h2>📊 Creator Studio</h2><button class="close" onclick="closePanels()">✕</button></div><div id="statsGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px"></div><p style="color:#999;margin-top:16px">Your audience and creator performance at a glance.</p></div></div>
+
+<!-- COMMENTS -->
+
+<div
+    class="comments-panel"
+    id="commentsPanel"
+>
+
+    <div class="comments-head">
+
+        <div>
+
+            <h3>💬 Comments</h3>
+
+            <div
+                class="comments-count"
+                id="commentsCount"
+            >
+                0 comments
+            </div>
+
+        </div>
+
+        <button
+            class="close"
+            onclick="closeComments()"
+        >
+            ✕
+        </button>
+
+    </div>
+
+    <div
+        class="comments-list"
+        id="commentsList"
+    >
+    </div>
+
+    <div class="comment-input">
+
+        <input
+            id="commentInput"
+            type="text"
+            inputmode="text"
+            autocomplete="off"
+            autocapitalize="sentences"
+            enterkeyhint="send"
+            placeholder="Add a comment..."
+            maxlength="300"
+            onkeydown="
+            if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); addComment(); }
+            "
+        >
+
+        <button onclick="addComment()">
+            ➤
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- LOCATION -->
+
+<div
+    class="location"
+    id="locationBox"
+>
+
+    <h2>📍 Location</h2>
+
+    <p>
+        Allow Tick Tock to use your location
+        for future nearby features.
+    </p>
+
+    <div class="location-buttons">
+
+        <button
+            class="allow"
+            onclick="allowLocation()"
+        >
+            Allow
+        </button>
+
+        <button
+            class="skip"
+            onclick="skipLocation()"
+        >
+            Not Now
+        </button>
+
+    </div>
+
+</div>
+
+
+<style>
+.explore-search-row{display:flex;gap:8px;margin:4px 0 16px}.explore-input{flex:1;min-width:0;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff;border-radius:13px;padding:12px 13px;outline:none}.explore-input:focus{border-color:rgba(255,255,255,.3)}.explore-section-title{display:flex;align-items:center;justify-content:space-between;margin:16px 0 9px}.explore-section-title h3{margin:0;font-size:16px}.explore-pills{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}.explore-pill{border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:#fff;border-radius:999px;padding:8px 12px;white-space:nowrap;cursor:pointer}.explore-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.explore-video{position:relative;aspect-ratio:9/14;border-radius:14px;overflow:hidden;background:#111;cursor:pointer}.explore-video video{width:100%;height:100%;object-fit:cover}.explore-video .ev-overlay{position:absolute;left:8px;right:8px;bottom:7px;text-shadow:0 2px 10px #000;font-size:12px;font-weight:700}.explore-video .ev-views{font-size:11px;color:#ddd;font-weight:500}.explore-creators{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}.explore-creator{min-width:105px;text-align:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px 8px;cursor:pointer}.explore-creator .creator-avatar{width:54px;height:54px;margin:0 auto 7px;border-radius:50%}.explore-creator b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.explore-creator small{color:#aaa}.explore-empty{padding:28px;text-align:center;color:#999}.explore-panel{width:min(900px,calc(100vw - 24px))!important}.explore-panel::-webkit-scrollbar{width:7px}@media(max-width:600px){.explore-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.explore-panel{width:100%!important}}
+</style>
+
+<script>
+
+let currentCommentVideo = null;
+let soundUnlocked = false;
+
+function mediaUrl(value){
+    const raw=String(value||"");
+    if(!raw) return "";
+    if(/^https?:\/\//i.test(raw)) return escapeHTML(raw);
+    return "/uploads/"+escapeHTML(raw);
+}
+
+function renderProfileUploads(videos, emptyText){
+    if(!Array.isArray(videos)||!videos.length){
+        return `<div class="profile-empty" style="grid-column:1/-1;">${escapeHTML(emptyText||"No Reels yet.")}</div>`;
+    }
+    return videos.map(v=>`<article class="profile-upload-card">
+        <video src="${mediaUrl(v.url)}" controls playsinline preload="metadata"></video>
+        <div class="pu-copy"><b>${escapeHTML(v.title||"Reel")}</b><p>${escapeHTML(v.caption||"")}</p></div>
+    </article>`).join("");
+}
+
+function genderAvatar(gender, photo, className="creator-avatar"){
+    if(photo){
+        return `<img class="${className}" src="${mediaUrl(photo)}" loading="lazy" alt="Profile">`;
+    }
+
+    const g = String(gender || "").toLowerCase();
+
+    /* Lightweight built-in cartoon avatars: no external image request. */
+    const boy = `
+        <svg viewBox="0 0 80 80" aria-label="Boy cartoon" style="width:100%;height:100%;">
+            <circle cx="40" cy="40" r="38" fill="#dbeafe"/>
+            <circle cx="40" cy="39" r="21" fill="#ffd2b3"/>
+            <path d="M19 37c1-20 12-29 23-29 14 0 24 10 21 29l-7-9-4 7-9-9-8 8-6-7z" fill="#3f2a20"/>
+            <circle cx="32" cy="40" r="2.8" fill="#111"/>
+            <circle cx="48" cy="40" r="2.8" fill="#111"/>
+            <path d="M33 51q7 5 14 0" fill="none" stroke="#8b4b3b" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M27 63q13-9 26 0" fill="#4f7cff"/>
+        </svg>`;
+
+    const girl = `
+        <svg viewBox="0 0 80 80" aria-label="Girl cartoon" style="width:100%;height:100%;">
+            <circle cx="40" cy="40" r="38" fill="#fce7f3"/>
+            <circle cx="40" cy="40" r="20" fill="#ffd2b3"/>
+            <path d="M18 39c-3-19 7-31 22-31 17 0 27 14 22 34l-7-5-3 14H28l-4-14z" fill="#3a2720"/>
+            <circle cx="32" cy="40" r="2.8" fill="#111"/>
+            <circle cx="48" cy="40" r="2.8" fill="#111"/>
+            <path d="M33 51q7 5 14 0" fill="none" stroke="#8b4b3b" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M27 64q13-9 26 0" fill="#ff5fa2"/>
+        </svg>`;
+
+    const neutral = `
+        <svg viewBox="0 0 80 80" aria-label="User cartoon" style="width:100%;height:100%;">
+            <circle cx="40" cy="40" r="38" fill="#e5e7eb"/>
+            <circle cx="40" cy="38" r="20" fill="#ffd2b3"/>
+            <path d="M20 36c1-18 10-27 20-27 12 0 21 9 20 27l-6-8-6 6-8-7-8 7z" fill="#4b5563"/>
+            <circle cx="32" cy="40" r="2.8" fill="#111"/>
+            <circle cx="48" cy="40" r="2.8" fill="#111"/>
+            <path d="M33 51q7 5 14 0" fill="none" stroke="#8b4b3b" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M27 64q13-9 26 0" fill="#7c8cff"/>
+        </svg>`;
+
+    const svg =
+        (g === "male" || g === "boy" || g === "m") ? boy :
+        (g === "female" || g === "girl" || g === "f") ? girl :
+        neutral;
+
+    return `<div class="${className}" style="overflow:hidden;display:flex;align-items:center;justify-content:center;">${svg}</div>`;
+}
+
+function closeDiscover(){
+    const panel=document.getElementById("discoverPanel");
+    if(panel) panel.style.display="none";
+}
+
+async function openDiscover(){
+    closePanels();
+    document.getElementById("discoverPanel").style.display="block";
+
+    const box=document.getElementById("discoverUsers");
+    box.innerHTML="Loading users...";
+
+    try{
+        const response=await fetch("/api/users",{cache:"no-store"});
+        const users=await response.json();
+
+        if(!Array.isArray(users) || !users.length){
+            box.innerHTML=`<div style="color:#888;text-align:center;padding:30px;">No other users yet.</div>`;
+            return;
+        }
+
+        box.innerHTML="";
+
+        users.forEach(user=>{
+            const card=document.createElement("div");
+            card.className="discover-card";
+
+            const username="@"+String(user.username||"").split("@")[0];
+            const gender=user.gender || "Profile";
+
+            card.innerHTML=`
+                ${genderAvatar(user.gender,user.photo,"creator-avatar")}
+                <div class="discover-info">
+                    <strong>${escapeHTML(username)}</strong>
+                    <small>${escapeHTML(gender)} · ${user.followers_count||0} followers</small>
+                </div>
+                <button class="${user.is_following ? "following" : ""}"
+                        onclick="toggleFollow('${escapeHTML(user.uid)}',this)">
+                    ${user.is_following ? "Following ✓" : "Follow"}
+                </button>`;
+
+            box.appendChild(card);
+        });
+    }catch(error){
+        console.log(error);
+        box.innerHTML=`<div style="color:#f88;padding:20px;">Could not load users.</div>`;
+    }
+}
+
+async function toggleFollow(uid,button){
+    try{
+        button.disabled=true;
+
+        const response=await fetch(
+            "/api/follow/"+encodeURIComponent(uid),
+            {method:"POST"}
+        );
+
+        const data=await response.json();
+
+        if(data.success){
+            button.textContent=data.following
+                ? "Following ✓"
+                : "Follow";
+
+            button.classList.toggle(
+                "following",
+                data.following
+            );
+
+            const mini = button.classList.contains("follow-mini");
+            if(mini && data.followers_count !== undefined){
+                const row=button.parentElement;
+                const count=row.querySelector(".creator-followers");
+                if(count) count.textContent=data.followers_count+" followers";
+            }
+        }
+    }catch(error){
+        console.log(error);
+    }finally{
+        button.disabled=false;
+    }
+}
+
+
+
+function openCreateReel(){
+    document.getElementById("createReelPanel").style.display = "block";
+}
+
+function closeCreateReel(){
+    document.getElementById("createReelPanel").style.display = "none";
+}
+
+function chooseHomeVideo(){
+    closeCreateReel();
+    document.getElementById("homeVideoPicker").click();
+}
+
+document.getElementById("homeVideoPicker").addEventListener("change", function(){
+    const file = this.files && this.files[0];
+    if(!file) return;
+    window.recordedReelFile = file;
+    const preview = document.getElementById("recordedPreview");
+    if(window.homeGalleryPreviewUrl) URL.revokeObjectURL(window.homeGalleryPreviewUrl);
+    window.homeGalleryPreviewUrl = URL.createObjectURL(file);
+    preview.src = window.homeGalleryPreviewUrl;
+    document.getElementById("recordCaption").value = "";
+    document.getElementById("recordTags").value = "";
+    setRecordPrivacy("public");
+    document.getElementById("recordReviewPanel").style.display = "block";
+    preview.load();
+});
+
+/* ==========================================
+   ENTER
+========================================== */
+
+function enterApp(){
+    // Enter button must take the user directly into the Home feed.
+    // Location is optional and must never block the Home screen.
+    soundUnlocked = true;
+
+    const gate = document.getElementById("gate");
+    if (gate) {
+        gate.style.display = "none";
+        gate.setAttribute("aria-hidden", "true");
+    }
+
+    const locationBox = document.getElementById("locationBox");
+    if (locationBox) {
+        locationBox.style.display = "none";
+    }
+
+    const feed = document.getElementById("feed");
+    if (feed) {
+        feed.style.display = "block";
+        feed.scrollTop = 0;
+    }
+
+    // Start/load the Home feed immediately after entering.
+    if (typeof loadVideos === "function") {
+        loadVideos();
+    }
+    startCurrentVideoWithSound();
+}
+
+// Extra click handler makes the Home entry button reliable on Android Chrome
+// and laptop browsers even if inline click handling is affected.
+document.addEventListener("DOMContentLoaded", function(){
+    const enterBtn = document.getElementById("enterAppBtn");
+    if (enterBtn) {
+        enterBtn.addEventListener("click", function(event){
+            event.preventDefault();
+            enterApp();
+        });
+    }
+});
+
+
+/* ==========================================
+   ACCOUNT + REFRESH
+========================================== */
+
+function switchUser(){
+    window.location.href = "/switch-account";
+}
+
+function logoutUser(){
+    if(confirm("Log out of Tick Tock?")){
+        window.location.href = "/logout";
+    }
+}
+
+async function refreshReels(){
+
+    const button = document.getElementById("refreshBtn");
+
+    if(button){
+        button.disabled = true;
+        button.textContent = "⏳";
+    }
+
+    try{
+        await fetch("/api/refresh", {method:"POST",cache:"no-store"});
+        await loadVideos();
+        document.getElementById("feed").scrollTop = 0;
+    }catch(error){
+        console.log(error);
+        alert("Could not refresh Reels.");
+    }finally{
+        if(button){
+            button.disabled = false;
+            button.textContent = "🔄";
+        }
+    }
+}
+
+function startCurrentVideoWithSound(){
+
+    const videos = document.querySelectorAll(".reel video");
+
+    if(!videos.length) return;
+
+    const first = videos[0];
+    if(first && !first.src && first.dataset.src){
+        first.src = first.dataset.src;
+        first.load();
+    }
+
+    document.querySelectorAll(".reel video").forEach(v => {
+        v.muted = true;
+        v.pause();
+    });
+
+    first.muted = false;
+    first.volume = 1;
+
+    first.play().catch(error => {
+        console.log("Sound autoplay was blocked:", error);
+    });
+}
+
+function openUploadMenu(){
+    document.getElementById("uploadSourcePanel").style.display = "block";
+}
+
+function closeUploadMenu(){
+    document.getElementById("uploadSourcePanel").style.display = "none";
+}
+
+function openMyUpload(){
+    window.location.href = "/upload";
+}
+
+function showFriendsReels(){
+    closeUploadMenu();
+    openFriends();
+}
+
+async function showInternetReels(){
+    closeUploadMenu();
+    await refreshReels();
+}
+
+
+let cameraStream = null;
+let mediaRecorder = null;
+let recordedChunks = [];
+let recordPrivacy = "public";
+
+function openCreateReel(){
+    document.getElementById("createReelPanel").style.display = "block";
+}
+
+function closeCreateReel(){
+    document.getElementById("createReelPanel").style.display = "none";
+}
+
+async function openCamera(){
+    closeCreateReel();
+    document.getElementById("cameraPanel").style.display = "block";
+    await startCamera();
+}
+
+async function startCamera(){
+    try{
+        if(cameraStream) cameraStream.getTracks().forEach(t => t.stop());
+
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+            video:true,
+            audio:true
+        });
+
+        const preview = document.getElementById("cameraPreview");
+        preview.srcObject = cameraStream;
+
+        document.getElementById("startRecordBtn").style.display = "none";
+        document.getElementById("recordBtn").style.display = "block";
+        document.getElementById("cameraStatus").textContent =
+            "Camera ready. Press Start Recording.";
+    }catch(error){
+        document.getElementById("cameraStatus").textContent =
+            "Camera permission was denied or camera is unavailable.";
+        alert("Please allow camera and microphone permission.");
+    }
+}
+
+function toggleRecording(){
+    const btn = document.getElementById("recordBtn");
+
+    if(mediaRecorder && mediaRecorder.state === "recording"){
+        mediaRecorder.stop();
+        btn.textContent = "🔴 Start Recording";
+        document.getElementById("cameraStatus").textContent =
+            "Recording finished. Preparing your Reel...";
+        return;
+    }
+
+    recordedChunks = [];
+    const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+        ? "video/webm;codecs=vp9,opus"
+        : "video/webm";
+
+    mediaRecorder = new MediaRecorder(cameraStream, {mimeType:mime});
+
+    mediaRecorder.ondataavailable = e => {
+        if(e.data.size > 0) recordedChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, {type:"video/webm"});
+        window.recordedReelFile = new File(
+            [blob],
+            "ticktock_camera_reel.webm",
+            {type:"video/webm"}
+        );
+
+        const preview = document.getElementById("recordedPreview");
+        preview.src = URL.createObjectURL(blob);
+
+        closeCamera();
+        document.getElementById("recordReviewPanel").style.display = "block";
+        document.getElementById("cameraStatus").textContent =
+            "Recording finished. Preview your Reel before posting.";
+    };
+
+    mediaRecorder.start();
+    btn.textContent = "⏹️ Stop Recording";
+    document.getElementById("cameraStatus").textContent =
+        "🔴 Recording... Press Stop Recording when finished.";
+}
+
+function closeCamera(){
+    if(cameraStream){
+        cameraStream.getTracks().forEach(t => t.stop());
+        cameraStream = null;
+    }
+    document.getElementById("cameraPanel").style.display = "none";
+}
+
+
+function setRecordPrivacy(value){
+    window.recordPrivacy = value;
+    const pub = document.getElementById("recordPublicBtn");
+    const pri = document.getElementById("recordPrivateBtn");
+    const status = document.getElementById("recordPrivacyStatus");
+    if(value === "private"){
+        pri.style.opacity = "1"; pub.style.opacity = ".55";
+        status.textContent = "Private — this Reel will stay out of the public Home feed.";
+    }else{
+        pub.style.opacity = "1"; pri.style.opacity = ".55";
+        status.textContent = "Public — can appear in the Home feed.";
+    }
+}
+
+function showUploadProgress(){ttLoadingStart('Uploading your Reel…');const p=document.getElementById('uploadProgressPanel');if(p)p.style.display='block';document.getElementById('uploadProgressBar').style.width='0%';document.getElementById('uploadProgressPercent').textContent='0%';document.getElementById('uploadProgressStatus').textContent='Uploading…';document.getElementById('uploadProgressText').textContent='Uploading your Reel…';document.getElementById('uploadSuccessBox').style.display='none';}
+function cancelUploadProgress(){document.getElementById('uploadProgressPanel').style.display='none';ttLoadingStop(0);}
+function uploadFileWithProgress(file,caption,tags,privacy,onDone){showUploadProgress();const xhr=new XMLHttpRequest(),data=new FormData();data.append('video',file,file.name||'ticktock_reel.webm');data.append('caption',caption);data.append('tags',tags);data.append('privacy',privacy);xhr.open('POST','/upload',true);xhr.upload.onprogress=e=>{if(!e.lengthComputable)return;const n=Math.round(e.loaded/e.total*100);document.getElementById('uploadProgressBar').style.width=n+'%';document.getElementById('uploadProgressPercent').textContent=n+'%';document.getElementById('uploadProgressText').textContent=n<100?'Uploading your Reel…':'Processing your Reel…'};xhr.onload=()=>{if(xhr.status>=200&&xhr.status<400){document.getElementById('uploadProgressBar').style.width='100%';document.getElementById('uploadProgressPercent').textContent='100%';document.getElementById('uploadProgressStatus').textContent='Complete';document.getElementById('uploadSuccessBox').style.display='block';document.getElementById('recordReviewPanel').style.display='none';ttLoadingStart('Finishing your Reel…');window.recordedReelFile=null;setTimeout(()=>{cancelUploadProgress();loadVideos();document.getElementById('feed')?.scrollTo({top:0,behavior:'smooth'});if(onDone)onDone();},900)}else{document.getElementById('uploadProgressStatus').textContent='Failed';alert('Could not upload the Reel. Please try again.')}};xhr.onerror=()=>{document.getElementById('uploadProgressStatus').textContent='Failed';alert('Network error while uploading. Please try again.')};xhr.send(data);}
+function postRecordedReel(){if(!window.recordedReelFile){alert('No video available.');return;}const button=document.querySelector('#recordReviewPanel button.primary:last-of-type');if(button){button.disabled=true;button.textContent='⏳ Uploading…';}uploadFileWithProgress(window.recordedReelFile,document.getElementById('recordCaption').value.trim(),document.getElementById('recordTags').value.trim(),window.recordPrivacy||'public',()=>{if(button){button.disabled=false;button.textContent='🚀 Post Reel';}});}
+
+function cancelRecording(){
+    document.getElementById("recordReviewPanel").style.display = "none";
+    window.recordedReelFile = null;
+    document.getElementById("recordCaption").value = "";
+    document.getElementById("recordTags").value = "";
+    document.getElementById("homeVideoPicker").value = "";
+    if(window.homeGalleryPreviewUrl){ URL.revokeObjectURL(window.homeGalleryPreviewUrl); window.homeGalleryPreviewUrl=null; }
+}
+
+/* ==========================================
+   LOCATION
+========================================== */
+
+function allowLocation(){
+
+    if(!navigator.geolocation){
+
+        skipLocation();
+        return;
+
+    }
+
+    navigator.geolocation.getCurrentPosition(
+
+        function(position){
+
+            console.log(
+                "Location permission granted."
+            );
+
+            console.log(
+                position.coords.latitude,
+                position.coords.longitude
+            );
+
+            document.getElementById(
+                "locationBox"
+            ).style.display = "none";
+
+        },
+
+        function(){
+
+            document.getElementById(
+                "locationBox"
+            ).style.display = "none";
+
+        }
+
+    );
+
+}
+
+
+function skipLocation(){
+
+    document.getElementById(
+        "locationBox"
+    ).style.display = "none";
+
+}
+
+
+/* ==========================================
+   PANELS
+========================================== */
+
+function closePanels(){
+    document.querySelectorAll('.panel-bg').forEach(function(panel){
+        panel.style.display = 'none';
+    });
+}
+
+
+
+function closeComments(){
+
+    document.getElementById(
+        "commentsPanel"
+    ).style.display = "none";
+
+}
+
+
+/* ==========================================
+   PROFILE
+========================================== */
+
+async function copyMyUid(){
+    const uid=document.getElementById("myUid")?.dataset.uid || "";
+    copyText(uid);
+}
+
+async function openProfile(){
+    ttLoadingStart('Loading your profile…');
+    closePanels();
+    document.getElementById("profilePanel").style.display="block";
+    const uploadsBox=document.getElementById("myUploads");
+    if(uploadsBox) uploadsBox.innerHTML='<div class="profile-empty" style="grid-column:1/-1;">Loading your Reels…</div>';
+    try{
+        const [profileResponse,uploadsResponse]=await Promise.all([
+            fetch("/api/me",{cache:"no-store"}),
+            fetch("/api/me/uploads",{cache:"no-store"})
+        ]);
+        const data=await profileResponse.json();
+        const uploadData=await uploadsResponse.json();
+        if(!data.success) return;
+        const user=data.user;
+        document.getElementById("myUsername").textContent="@"+String(user.username||"").split("@")[0];
+        const displayUid=user.friend_uid||user.uid||"—";
+        document.getElementById("myUid").textContent="UID: "+displayUid;
+        document.getElementById("myUid").dataset.uid=displayUid;
+        document.getElementById("myBio").textContent=user.bio||"Welcome to my Tick Tock profile 🚀";
+        const avatar=document.getElementById("myAvatar");
+        avatar.innerHTML=user.photo?`<img src="${mediaUrl(user.photo)}" class="avatar" loading="lazy" alt="Profile">`:genderAvatar(user.gender,null,"avatar");
+        if(uploadsBox) uploadsBox.innerHTML=renderProfileUploads(uploadData.videos||[],"You haven't uploaded any Reels yet. Tap ➕ Create to post one.");
+    }catch(error){
+        console.log(error);
+        if(uploadsBox) uploadsBox.innerHTML='<div class="profile-empty" style="grid-column:1/-1;">Could not load your uploads.</div>';
+    }finally{ttLoadingStop(120);}
+}
+
+async function openPublicProfile(uid){
+    if(!uid) return;
+    ttLoadingStart('Loading profile…');
+    closePanels();
+    const panel=document.getElementById("publicProfilePanel");
+    if(!panel) return;
+    panel.style.display="block";
+    const box=document.getElementById("publicUploads");
+    box.innerHTML='<div class="profile-empty" style="grid-column:1/-1;">Loading Reels…</div>';
+    try{
+        const response=await fetch("/api/user/"+encodeURIComponent(uid),{cache:"no-store"});
+        const data=await response.json();
+        if(!data.success){ box.innerHTML='<div class="profile-empty" style="grid-column:1/-1;">User not found.</div>'; return; }
+        const user=data.user;
+        document.getElementById("publicUsername").textContent="@"+String(user.username||"").split("@")[0];
+        document.getElementById("publicUid").textContent="UID: "+(user.friend_uid||user.uid||"—");
+        document.getElementById("publicBio").textContent=user.bio||"Welcome to Tick Tock 🚀";
+        document.getElementById("publicFollowers").textContent=user.followers_count||0;
+        document.getElementById("publicFollowing").textContent=user.following_count||0;
+        document.getElementById("publicVideos").textContent=(user.videos||[]).length;
+        const avatar=document.getElementById("publicAvatar");
+        avatar.innerHTML=user.photo?`<img src="${mediaUrl(user.photo)}" class="avatar" loading="lazy" alt="Profile">`:genderAvatar(user.gender,null,"avatar");
+        const follow=document.getElementById("publicFollowBtn");
+        follow.textContent=user.is_following?"Following ✓":"Follow";
+        follow.classList.toggle("following",!!user.is_following);
+        follow.disabled=false;
+        follow.onclick=async()=>{
+            follow.disabled=true;
+            try{
+                const r=await fetch("/api/follow/"+encodeURIComponent(user.friend_uid||user.uid),{method:"POST"});
+                const d=await r.json();
+                if(d.success){
+                    follow.textContent=d.following?"Following ✓":"Follow";
+                    follow.classList.toggle("following",!!d.following);
+                    document.getElementById("publicFollowers").textContent=d.followers_count||0;
+                }
+            }finally{follow.disabled=false;}
+        };
+        box.innerHTML=renderProfileUploads(user.videos||[],"No public Reels yet.");
+    }catch(error){
+        console.log(error);
+        box.innerHTML='<div class="profile-empty" style="grid-column:1/-1;">Could not load this profile.</div>';
+    }finally{ttLoadingStop(120);}
+}
+
+
+/* ==========================================
+   FRIENDS
+========================================== */
+
+function openFriends(){
+
+    closePanels();
+
+    document.getElementById(
+        "profilePanel"
+    ).style.display = "none";
+
+    document.getElementById(
+        "friendsPanel"
+    ).style.display = "block";
+
+    loadFriendRequests();
+    loadFriends();
+
+}
+
+
+async function searchUser(){
+
+    const uid = document.getElementById("uidSearch").value.trim();
+    if(!/^\d{8}$/.test(uid)){ alert("Enter the 8-digit UID."); return; }
+
+    if(!uid){
+
+        alert("Enter a UID first.");
+        return;
+
+    }
+
+    const box =
+        document.getElementById(
+            "searchResult"
+        );
+
+    box.innerHTML = "Searching...";
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/user/" +
+                encodeURIComponent(uid)
+            );
+
+        const data =
+            await response.json();
+
+        if(!data.success){
+
+            box.innerHTML =
+                `<div class="user-card">
+                ❌ User not found
+                </div>`;
+
+            return;
+
+        }
+
+        const user = data.user;
+
+        let avatar;
+
+        if(user.photo){
+
+            avatar =
+                `<img
+                src="${mediaUrl(user.photo)}"
+                class="user-avatar"
+                >`;
+
+        }else{
+
+            avatar =
+                `<div
+                class="user-avatar"
+                style="
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                font-size:22px;
+                "
+                >👤</div>`;
+
+        }
+
+        box.innerHTML =
+            `<div class="user-card">
+
+                ${avatar}
+
+                <div class="user-info">
+
+                    <strong>
+                        @${user.username.split("@")[0]}
+                    </strong>
+
+                    <small>
+                        ${user.uid}
+                    </small>
+
+                </div>
+
+                <button
+                    onclick="sendFriend('${user.friend_uid || user.uid}')"
+                >
+                    ➕ Add
+                </button>
+
+            </div>`;
+
+    }catch(error){
+
+        box.innerHTML =
+            "Search failed.";
+
+        console.log(error);
+
+    }
+
+}
+
+
+async function sendFriend(uid){
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/friend-request/" +
+                encodeURIComponent(uid),
+                {
+                    method:"POST"
+                }
+            );
+
+        const data =
+            await response.json();
+
+        alert(data.message);
+
+    }catch(error){
+
+        alert("Something went wrong.");
+
+    }
+
+}
+
+
+/* ==========================================
+   REQUESTS
+========================================== */
+
+async function loadFriendRequests(){
+
+    const box =
+        document.getElementById(
+            "requests"
+        );
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/friend-requests"
+            );
+
+        const requests =
+            await response.json();
+
+        if(!requests.length){
+
+            box.innerHTML =
+                `<div
+                style="
+                color:#777;
+                padding:10px;
+                "
+                >
+                No pending requests.
+                </div>`;
+
+            return;
+
+        }
+
+        box.innerHTML = "";
+
+        requests.forEach(req => {
+
+            let avatar;
+
+            if(req.photo){
+
+                avatar =
+                    `<img
+                    src="${mediaUrl(req.photo)}"
+                    class="user-avatar"
+                    >`;
+
+            }else{
+
+                avatar =
+                    `<div
+                    class="user-avatar"
+                    style="
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    "
+                    >👤</div>`;
+
+            }
+
+            box.innerHTML +=
+                `<div class="user-card">
+
+                    ${avatar}
+
+                    <div class="user-info">
+
+                        <strong>
+                            @${req.username.split("@")[0]}
+                        </strong>
+
+                        <small>
+                            ${req.uid}
+                        </small>
+
+                    </div>
+
+                    <button
+                        class="accept"
+                        onclick="acceptRequest(${req.id})"
+                    >
+                        ✓
+                    </button>
+
+                    <button
+                        class="reject"
+                        onclick="rejectRequest(${req.id})"
+                    >
+                        ✕
+                    </button>
+
+                </div>`;
+
+        });
+
+    }catch(error){
+
+        box.innerHTML =
+            "Could not load requests.";
+
+    }
+
+}
+
+
+async function acceptRequest(id){
+
+    const response =
+        await fetch(
+            "/api/friend-request/" +
+            id +
+            "/accept",
+            {
+                method:"POST"
+            }
+        );
+
+    const data =
+        await response.json();
+
+    alert(data.message);
+
+    loadFriendRequests();
+    loadFriends();
+
+}
+
+
+async function rejectRequest(id){
+
+    await fetch(
+        "/api/friend-request/" +
+        id +
+        "/reject",
+        {
+            method:"POST"
+        }
+    );
+
+    loadFriendRequests();
+
+}
+
+
+/* ==========================================
+   FRIEND LIST
+========================================== */
+
+async function loadFriends(){
+
+    const box =
+        document.getElementById(
+            "friendList"
+        );
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/friends"
+            );
+
+        const friends =
+            await response.json();
+
+        if(!friends.length){
+
+            box.innerHTML =
+                `<div
+                style="
+                color:#777;
+                padding:10px;
+                "
+                >
+                No friends yet.
+                </div>`;
+
+            return;
+
+        }
+
+        box.innerHTML = "";
+
+        friends.forEach(friend => {
+
+            let avatar;
+
+            if(friend.photo){
+
+                avatar =
+                    `<img
+                    src="${mediaUrl(friend.photo)}"
+                    class="user-avatar"
+                    >`;
+
+            }else{
+
+                avatar =
+                    `<div
+                    class="user-avatar"
+                    style="
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    "
+                    >👤</div>`;
+
+            }
+
+            box.innerHTML +=
+                `<div class="user-card">
+
+                    ${avatar}
+
+                    <div class="user-info">
+
+                        <strong>
+                            @${friend.username.split("@")[0]}
+                        </strong>
+
+                        <small>
+                            ${friend.uid}
+                        </small>
+
+                    </div>
+
+                    <button
+                        class="reject"
+                        onclick="
+                        removeFriend('${friend.uid}')
+                        "
+                    >
+                        Remove
+                    </button>
+
+                </div>`;
+
+        });
+
+    }catch(error){
+
+        box.innerHTML =
+            "Could not load friends.";
+
+    }
+
+}
+
+
+async function removeFriend(uid){
+
+    if(!confirm(
+        "Remove this friend?"
+    )) return;
+
+    const response =
+        await fetch(
+            "/api/friend/remove/" +
+            encodeURIComponent(uid),
+            {
+                method:"POST"
+            }
+        );
+
+    const data =
+        await response.json();
+
+    alert(data.message);
+
+    loadFriends();
+
+}
+
+
+/* ==========================================
+   COMMENTS
+========================================== */
+
+async function openComments(videoId){
+
+    ttLoadingStart('Loading comments…');
+    currentCommentVideo = videoId;
+
+    const panel = document.getElementById("commentsPanel");
+    const input = document.getElementById("commentInput");
+
+    panel.style.display = "flex";
+    panel.setAttribute("aria-hidden", "false");
+
+    // Focus immediately while this function is still inside the user's tap/click.
+    // Waiting for the network request first can prevent Android/iOS from opening
+    // the software keyboard.
+    requestAnimationFrame(() => {
+        try {
+            input.focus({preventScroll:true});
+        } catch(e) {
+            input.focus();
+        }
+    });
+
+    await loadComments(videoId);
+    ttLoadingStop(120);
+
+    // Loading comments must never steal focus from the text field.
+    setTimeout(() => {
+        if(document.activeElement !== input){
+            try { input.focus({preventScroll:true}); } catch(e) { input.focus(); }
+        }
+    }, 50);
+
+}
+
+
+async function loadComments(videoId){
+
+    const list =
+        document.getElementById(
+            "commentsList"
+        );
+
+    const cacheKey='tt_comments_'+videoId;
+    const cached=window.__ttCommentCache?.[cacheKey];
+    list.innerHTML = cached ? cached : `<div class="loading-skeleton" style="padding:20px;margin:auto"><div class="skeleton-line"></div><div class="skeleton-line short"></div><div class="skeleton-line"></div></div>`;
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/comments/" +
+                encodeURIComponent(videoId)
+            );
+
+        const comments = await response.json();
+        window.__ttCommentCache=window.__ttCommentCache||{};
+
+        document.getElementById(
+            "commentsCount"
+        ).textContent =
+            comments.length +
+            (
+                comments.length === 1
+                ? " comment"
+                : " comments"
+            );
+
+        if(!comments.length){
+
+            list.innerHTML =
+                `<div
+                style="
+                text-align:center;
+                color:#777;
+                padding:40px 10px;
+                "
+                >
+                Be the first to comment 💬
+                </div>`;
+
+            return;
+
+        }
+
+        list.innerHTML = "";
+        const rendered=[];
+        comments.forEach(comment => {
+
+            const item =
+                document.createElement(
+                    "div"
+                );
+
+            item.className =
+                "comment-item";
+
+            item.innerHTML =
+                `<div class="comment-avatar">
+                    👤
+                </div>
+
+                <div class="comment-body">
+
+                    <div class="comment-user">
+                        @${comment.username.split("@")[0]}
+                    </div>
+
+                    <div class="comment-text">
+                        ${escapeHTML(comment.comment)}
+                    </div>
+
+                </div>`;
+
+            list.appendChild(item);
+            rendered.push(item.outerHTML);
+        });
+        window.__ttCommentCache[cacheKey]=rendered.join('');
+
+    }catch(error){
+
+        list.innerHTML =
+            "Could not load comments.";
+
+        console.log(error);
+
+    }
+
+}
+
+
+async function addComment(){
+
+    const input =
+        document.getElementById(
+            "commentInput"
+        );
+
+    const text =
+        input.value.trim();
+
+    if(!text) return;
+
+    if(!currentCommentVideo) return;
+
+    try{
+
+        const response =
+            await fetch(
+                "/api/comment/" +
+                encodeURIComponent(
+                    currentCommentVideo
+                ),
+                {
+                    method:"POST",
+                    headers:{
+                        "Content-Type":
+                            "application/json"
+                    },
+                    body:JSON.stringify({
+                        comment:text
+                    })
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if(data.success){
+
+            input.value = "";
+
+            await loadComments(
+                currentCommentVideo
+            );
+
+        }else{
+
+            alert(
+                data.message ||
+                "Comment failed."
+            );
+
+        }
+
+    }catch(error){
+
+        alert("Could not add comment.");
+
+    }
+
+}
+
+
+function escapeHTML(text){
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+    div.textContent = text;
+
+    return div.innerHTML;
+
+}
+
+
+/* ==========================================
+   LIKES
+========================================== */
+
+async function loadLikeStates(videos){
+    try{
+        const ids = videos.map(v => v.id).filter(Boolean);
+        if(!ids.length) return;
+
+        const response = await fetch("/api/like-status?ids=" + encodeURIComponent(ids.join(",")));
+        if(!response.ok) return;
+
+        const states = await response.json();
+        document.querySelectorAll(".action[data-like-video-id]").forEach(button => {
+            const id = button.getAttribute("data-like-video-id");
+            const state = states[id];
+            if(!state) return;
+
+            const circle = button.querySelector(".circle");
+            const label = button.querySelector("small");
+            if(circle) circle.textContent = state.liked ? "💖" : "❤️";
+            if(label) label.textContent = state.count + (state.count === 1 ? " Like" : " Likes");
+        });
+    }catch(error){
+        console.log("Like state loading failed:", error);
+    }
+}
+
+async function likeVideo(button,videoId){
+    if(!button || button.dataset.busy==='1') return;
+    button.dataset.busy='1'; button.classList.add('optimistic');
+    const circle=button.querySelector('.circle'); const label=button.querySelector('small');
+    const beforeCircle=circle?.textContent||'❤️'; const beforeLabel=label?.textContent||'0 Likes';
+    if(circle) circle.textContent=beforeCircle==='❤️'?'💖':'❤️';
+    try{
+
+        const response =
+            await fetch(
+                "/api/like/" +
+                encodeURIComponent(videoId),
+                {
+                    method:"POST"
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if(data.success){
+
+            button.querySelector(
+                ".circle"
+            ).textContent =
+                data.liked
+                ? "💖"
+                : "❤️";
+
+            const label =
+                button.querySelector(
+                    "small"
+                );
+
+            label.textContent =
+                data.count +
+                (
+                    data.count === 1
+                    ? " Like"
+                    : " Likes"
+                );
+
+        }
+
+    }catch(error){
+
+        console.log(error);
+        if(circle) circle.textContent=beforeCircle;
+        if(label) label.textContent=beforeLabel;
+    }finally{button.dataset.busy='0';button.classList.remove('optimistic');}
+
+}
+
+
+/* ==========================================
+   SHARE
+========================================== */
+
+async function shareVideo(videoId){
+
+    const link =
+        window.location.origin +
+        "/home?video=" +
+        encodeURIComponent(videoId);
+
+    if(navigator.share){
+
+        try{
+
+            await navigator.share({
+                title:"Tick Tock",
+                text:"Check this Reel on Tick Tock!",
+                url:link
+            });
+
+        }catch(error){}
+
+    }else{
+
+        try{
+
+            await navigator.clipboard.writeText(
+                link
+            );
+
+            alert("Link copied! 🔗");
+
+        }catch(error){
+
+            alert(link);
+
+        }
+
+    }
+
+}
+
+
+/* ==========================================
+   SOUND
+========================================== */
+
+function toggleSound(button){
+
+    const reel =
+        button.closest(".reel");
+
+    const video =
+        reel.querySelector("video");
+
+    video.muted =
+        !video.muted;
+
+    button.querySelector(
+        ".circle"
+    ).textContent =
+        video.muted
+        ? "🔇"
+        : "🔊";
+
+}
+
+
+async function explainShort(event,button,title,caption,tags,creator){
+    event.stopPropagation();
+    const box=button.nextElementSibling;
+    if(!box) return;
+    if(box.style.display==="block"){box.style.display="none";return;}
+    button.disabled=true; button.textContent="🤖 Thinking…";
+    try{
+        const qs=new URLSearchParams({title,caption,tags,creator});
+        const r=await fetch("/api/ai/explain?"+qs.toString(),{cache:"no-store"});
+        const d=await r.json();
+        if(!r.ok || !d.success) throw new Error("AI unavailable");
+        box.textContent="🤖 AI: "+d.summary;
+        box.style.display="block";
+        button.textContent="🤖 Hide AI explanation";
+    }catch(e){
+        box.textContent="🤖 AI explanation is temporarily unavailable.";
+        box.style.display="block";
+        button.textContent="🤖 What is this?";
+    }finally{button.disabled=false;}
+}
+
+/* ==========================================
+   VIDEO FEED
+========================================== */
+
+let videoLoadPromise = null;
+
+async function loadVideos(force=false){
+    const feed=document.getElementById("feed");
+    if(!feed)return;
+    if(!force && videoLoadPromise)return videoLoadPromise;
+    if(!feed.querySelector(".reel")){
+      feed.innerHTML=`<div class="fast-loading"><div class="fast-loading-card"><img src="/static/ticktock-logo.png?v=8" alt="Tick Tock"><b>Tick Tock</b><small>Loading your feed…</small><div class="fast-spinner"></div></div></div>`;
+    }
+    const showStatus=(msg)=>{const el=document.getElementById('fastStatus');if(el){el.textContent=msg;el.style.display='block';clearTimeout(window.__statusTimer);window.__statusTimer=setTimeout(()=>el.style.display='none',1400);}};
+    const cached=(()=>{try{return JSON.parse(sessionStorage.getItem('tt_feed_cache_v8')||'null')}catch(_){return null}})();
+    if(!force && Array.isArray(cached) && cached.length){renderFeed(cached);showStatus('Feed ready ⚡');}
+    videoLoadPromise=(async()=>{
+      let uploads=[],pixabay=[];
+      const getJSON=async(url,label)=>{
+        try{
+          const response=await fetch(url,{cache:'no-store'});
+          if(!response.ok) throw new Error(label+' HTTP '+response.status);
+          const data=await response.json();
+          return Array.isArray(data)?data:[];
+        }catch(error){
+          console.warn(label+' feed request failed:',error);
+          return [];
+        }
+      };
+      try{
+        // Do NOT abort either request. Render's free service can wake slowly, and
+        // aborting after headers arrive can cancel response.json() itself.
+        const uploadsPromise=getJSON('/api/uploads?ts='+Date.now(),'Uploads');
+        const pixabayPromise=getJSON('/api/videos?ts='+Date.now(),'Pixabay');
+
+        uploads=await uploadsPromise;
+        if(uploads.length){
+          renderFeed(uploads);
+          showStatus('Your videos are ready ✓');
+        }
+
+        pixabay=await pixabayPromise;
+        const data=[...(Array.isArray(uploads)?uploads:[]),...(Array.isArray(pixabay)?pixabay:[])].filter(x=>x&&x.url);
+        if(data.length){
+          renderFeed(data);
+          try{sessionStorage.setItem('tt_feed_cache_v8',JSON.stringify(data.slice(0,20)));}catch(_){}
+          if(typeof soundUnlocked!=='undefined' && soundUnlocked && typeof startCurrentVideoWithSound==='function')startCurrentVideoWithSound();
+        }else if(!feed.querySelector('.reel')){
+          feed.innerHTML=`<div class="fast-loading"><div class="fast-loading-card"><img src="/static/ticktock-logo.png?v=9" alt="Tick Tock"><b>No videos yet</b><small>We couldn't get a feed right now.</small><button class="v3-action" onclick="loadVideos(true)">Try again</button></div></div>`;
+        }
+      }catch(error){
+        console.error('Feed load error:',error);
+        if(!feed.querySelector('.reel') && !cached)feed.innerHTML=`<div class="fast-loading"><div class="fast-loading-card"><img src="/static/ticktock-logo.png?v=9" alt="Tick Tock"><b>Feed is taking a little longer</b><small>Please tap Try again.</small><button class="v3-action" onclick="loadVideos(true)">Try again</button></div></div>`;
+      }finally{videoLoadPromise=null;}
+    })();
+    return videoLoadPromise;
+}
+
+function renderFeed(data){
+    const feed=document.getElementById('feed'); if(!feed) return;
+    data=(Array.isArray(data)?data:[]).filter(x=>x&&x.url);
+    const seen=new Set(); data=data.filter(x=>{const k=String(x.id||x.url);if(seen.has(k))return false;seen.add(k);return true;});
+    for(let i=data.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[data[i],data[j]]=[data[j],data[i]];}
+    const fragment=document.createDocumentFragment();
+    data.forEach(item=>{
+      const reel=document.createElement('div'); reel.className='reel';
+      const creator=item.creator||'ticktock', title=item.title||'Indian Reel 🇮🇳';
+      reel.innerHTML=`<video data-src="${escapeHTML(String(item.url||''))}" loop playsinline muted preload="none"></video>
+        <div class="side">
+          <div class="action" data-like-video-id="${escapeHTML(String(item.id))}" onclick="likeVideo(this,'${escapeHTML(String(item.id))}')"><div class="circle">❤️</div><small>0 Likes</small></div>
+          <div class="action" onclick="openComments('${escapeHTML(String(item.id))}')"><div class="circle">💬</div><small>Comment</small></div>
+          <div class="action" onclick="shareVideo('${escapeHTML(String(item.id))}')"><div class="circle">↗️</div><small>Share</small></div>
+          <div class="action" onclick="bookmarkVideo('${escapeHTML(String(item.id))}',this)"><div class="circle">🔖</div><small>Save</small></div>
+          <div class="action" onclick="toggleSound(this)"><div class="circle">🔇</div><small>Sound</small></div>
+        </div>
+        <div class="bottom-info">
+          <div class="creator-row creator-click" onclick="openPublicProfile('${escapeHTML(String(item.creator_friend_uid||item.creator_uid||''))}')">
+            ${genderAvatar(item.creator_gender,item.creator_photo,'creator-avatar')}
+            <div style="flex:1;min-width:0"><div class="creator">@${escapeHTML(String(creator))}${String(creator).toLowerCase().startsWith('ticktock_ai_')?'<span class="ai-bot-badge">🤖 AI</span>':''}</div><div class="creator-followers" style="font-size:11px;color:#ddd">${item.creator_uid?(item.creator_followers||0)+' followers':'Tick Tock'}</div></div>
+            ${item.creator_uid?`<button class="follow-mini ${item.is_following?'following':''}" onclick="event.stopPropagation();toggleFollow('${escapeHTML(item.creator_friend_uid||item.creator_uid)}',this)">${item.is_following?'Following ✓':'Follow'}</button>`:''}
+          </div>
+          <div class="caption">${escapeHTML(title)}</div>
+          <button type="button" class="ai-explain-btn" onclick="explainShort(event,this,${JSON.stringify(String(title))},${JSON.stringify(String(item.caption||''))},${JSON.stringify(String(item.tags||''))},${JSON.stringify(String(creator))})">🤖 What is this?</button>
+          <div class="ai-explain-box"></div><div class="sound">🎵 Tick Tock</div>
+        </div>`;
+      // Double-tap/click the video to like, a familiar short-video interaction.
+      const vid=reel.querySelector('video'); let lastTap=0;
+      vid.addEventListener('pointerup',()=>{const now=Date.now();if(now-lastTap<320){const btn=reel.querySelector('[data-like-video-id]');if(btn)likeVideo(btn,item.id)}lastTap=now;});
+      fragment.appendChild(reel);
+    });
+    feed.innerHTML=''; feed.appendChild(fragment); loadLikeStates(data); setupObserver();
+}
+
+
+/* ==========================================
+   AUTOPLAY
+========================================== */
+
+function setupObserver(){
+
+    const reels = Array.from(document.querySelectorAll(".reel"));
+
+    function prepareVideo(video){
+        if(!video) return;
+        const src = video.dataset.src || "";
+        if(src && !video.src){
+            video.src = src;
+            video.load();
+        }
+    }
+
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            const reel = entry.target;
+            const video = reel.querySelector("video");
+            if(!video) return;
+
+            if(entry.isIntersecting){
+                // Load only the current reel and one next reel. On slower devices
+                // this prevents several large MP4 files from competing for bandwidth.
+                const index = reels.indexOf(reel);
+                prepareVideo(video);
+                if(index + 1 < reels.length) prepareVideo(reels[index+1].querySelector("video"));
+
+                reels.forEach((r, i) => {
+                    const v = r.querySelector("video");
+                    if(!v || v === video) return;
+                    v.pause();
+                    // Release far-away media elements so the browser can reclaim
+                    // network/buffer memory while the user scrolls.
+                    if(Math.abs(i-index) > 2) {
+                        v.removeAttribute("src");
+                        v.load();
+                    }
+                });
+
+                video.muted = !soundUnlocked;
+                video.play().catch(() => {
+                    video.muted = true;
+                    video.play().catch(() => {});
+                });
+            } else {
+                video.pause();
+            }
+        });
+    }, {threshold: 0.65, rootMargin: "300px 0px"});
+
+    reels.forEach(reel => observer.observe(reel));
+}
+
+
+/* ==========================================
+   DIAMONDS / TOP UP / GIFTS
+========================================== */
+let walletOpen=false;
+function closeWallet(){ const p=document.getElementById("walletPanel"); if(p)p.style.display="none"; walletOpen=false; }
+async function openWallet(){
+    closePanels(); closeDiscover();
+    const p=document.getElementById("walletPanel"); if(p)p.style.display="block"; walletOpen=true;
+    await loadWallet();
+}
+async function loadWallet(){
+    try{
+        const r=await fetch("/api/diamonds",{cache:"no-store"});
+        const d=await r.json();
+        if(!d.success){ alert(d.message||"Please login again."); return; }
+        document.getElementById("diamondBalance").textContent=(d.balance||0)+" 💎";
+        const packs=document.getElementById("diamondPacks"); packs.innerHTML="";
+        Object.entries(d.packs||{}).forEach(([id,p])=>{
+            const b=document.createElement("button"); b.className="friends"; b.style.padding="14px";
+            b.innerHTML=`💎 ${p.diamonds}<br><small>₹${p.rupees}</small>`;
+            b.onclick=()=>buyDiamonds(id,p); packs.appendChild(b);
+        });
+        const gifts=document.getElementById("giftCatalog"); gifts.innerHTML="";
+        Object.entries(d.gifts||{}).forEach(([id,g])=>{
+            const b=document.createElement("button"); b.className="friends"; b.style.padding="14px"; b.dataset.gift=id;
+            b.innerHTML=`${g.emoji} ${g.name}<br><small>${g.diamonds} 💎</small>`;
+            b.onclick=()=>sendGiftFromProfile(id); gifts.appendChild(b);
+        });
+    }catch(e){ console.log(e); }
+}
+async function buyDiamonds(packId,pack){
+    try{
+        const r=await fetch("/api/diamonds/create-order",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pack:packId})});
+        const d=await r.json();
+        if(!r.ok || !d.success){ alert(d.message||"Top Up is not configured yet."); return; }
+        const options={key:d.key_id,amount:d.amount,currency:d.currency,name:"Tick Tock",description:`${d.diamonds} Diamonds`,order_id:d.order_id,
+            handler:async function(resp){
+                const vr=await fetch("/api/diamonds/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...resp,diamonds:d.diamonds})});
+                const vd=await vr.json(); alert(vd.message||"Payment complete"); if(vd.success)loadWallet();
+            },theme:{color:"#7957ff"}};
+        if(!window.Razorpay){ alert("Payment window could not load. Refresh and try again."); return; }
+        new Razorpay(options).open();
+    }catch(e){ alert("Top Up failed. Please try again."); }
+}
+async function sendGiftFromProfile(giftId){
+    const uid=prompt("Enter the creator UID to send this gift:");
+    if(!uid)return;
+    try{
+        const r=await fetch("/api/gifts/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({uid:uid.trim(),gift:giftId})});
+        const d=await r.json(); alert(d.message||"Done"); if(d.success)loadWallet();
+    }catch(e){alert("Gift could not be sent.");}
+}
+function openGiftForReel(uid,videoId){
+    openWallet().then(()=>{
+        const catalog=document.getElementById("giftCatalog");
+        catalog.querySelectorAll("button").forEach(b=>{
+            b.onclick=()=>sendGift(uid,videoId,b.dataset.gift||"");
+        });
+    });
+}
+async function sendGift(uid,videoId,giftId){
+    if(!giftId){ alert("Choose a gift from the wallet."); return; }
+    try{
+        const r=await fetch("/api/gifts/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({uid:uid,video_id:videoId,gift:giftId})});
+        const d=await r.json(); alert(d.message||"Done"); if(d.success)loadWallet();
+    }catch(e){alert("Gift could not be sent.");}
+}
+
+function mobileHome(){
+    closePanels();
+    const feed=document.getElementById('feed');
+    if(feed) feed.scrollTo({top:0,behavior:'smooth'});
+}
+function openMobileMore(){ showPanel('mobileMorePanel'); }
+function showFriendsList(){closePanels();const p=document.getElementById('friendsPanel');if(p)p.style.display='block';loadFriendRequests();loadFriends();}
+async function openFriendsReels(){ttLoadingStart('Loading friends Reels…');closePanels();const p=document.getElementById('friendsReelsPanel');if(p)p.style.display='block';const box=document.getElementById('friendsReelsList');if(!box)return;box.innerHTML='Loading friends Reels…';try{const r=await fetch('/api/friend-reels',{cache:'no-store'});const d=await r.json();if(!Array.isArray(d)||!d.length){box.innerHTML='<div class="v3-muted">No public Reels from friends yet.</div>';return;}box.innerHTML=d.map(v=>`<article class="friend-reel-card"><div class="friend-reel-head">${v.photo?`<img class="mini-avatar" src="${mediaUrl(v.photo)}">`:`<div class="mini-avatar"></div>`}<div style="flex:1"><b>@${escapeHTML((v.username||v.creator||'user').split('@')[0])}</b><div class="v3-muted">UID ${escapeHTML(v.creator_friend_uid||v.creator_uid||'')}</div></div><button class="copy-uid" onclick="copyText('${escapeHTML(v.creator_friend_uid||v.creator_uid||'')}')">Copy UID</button></div><video src="${escapeHTML(v.url)}" controls playsinline preload="metadata"></video><p>${escapeHTML(v.caption||'')}</p></article>`).join('');}catch(e){box.innerHTML='<div class="v3-muted">Could not load friends Reels.</div>'}finally{ttLoadingStop(120);}}
+function copyText(text){if(!text)return;navigator.clipboard?.writeText(text).then(()=>alert('Copied UID: '+text)).catch(()=>prompt('Copy UID',text));}
+
+
+/* ==========================================
+   EXPLORE
+========================================== */
+function openExplore(){
+    ttLoadingStart('Loading Explore…');
+    closePanels();
+    const panel=document.getElementById('explorePanel');
+    if(panel) panel.style.display='block';
+    const q=document.getElementById('exploreQuery');
+    if(q) q.value='';
+    loadExplore().finally(()=>ttLoadingStop(120));
+}
+
+function exploreEscape(v){return escapeHTML(String(v??''));}
+function exploreViews(v){const n=Number(v||0);if(n>=1000000)return (n/1000000).toFixed(1)+'M';if(n>=1000)return (n/1000).toFixed(1)+'K';return String(n);}
+
+async function loadExplore(query=''){
+    const box=document.getElementById('exploreContent');
+    if(!box)return;
+    const cacheKey='tt_explore_'+query; const cached=window.__ttExploreCache?.[cacheKey]; box.innerHTML=cached||'<div class="explore-empty skeleton"><div class="loading-skeleton" style="margin:auto"><div class="skeleton-line big"></div><div class="skeleton-line"></div><div class="skeleton-line"></div></div></div>';
+    try{
+        const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),4500);const r=await fetch('/api/explore'+(query?'?q='+encodeURIComponent(query):''),{cache:'default',signal:ctl.signal});clearTimeout(timer);
+        const d=await r.json();
+        if(!r.ok || d.success===false) throw new Error(d.message||'Explore unavailable');
+        let html='';
+        const tags=d.hashtags||[];
+        html+='<div class="explore-section-title"><h3>🔥 Trending hashtags</h3></div>';
+        html+=tags.length?'<div class="explore-pills">'+tags.map(t=>`<button class="explore-pill" onclick="exploreTag('${exploreEscape(t.tag)}')">#${exploreEscape(t.tag)} <small>${exploreViews(t.count)}</small></button>`).join('')+'</div>':'<div class="explore-empty">No trending hashtags yet.</div>';
+        const users=d.users||[];
+        html+='<div class="explore-section-title"><h3>👤 Creators to discover</h3></div>';
+        html+=users.length?'<div class="explore-creators">'+users.map(u=>`<div class="explore-creator" onclick="openPublicProfile('${exploreEscape(u.uid||'')}')">${genderAvatar(u.gender,u.photo,'creator-avatar')}<b>@${exploreEscape(String(u.username||'').split('@')[0])}</b><small>${exploreViews(u.followers_count||0)} followers</small></div>`).join('')+'</div>':'<div class="explore-empty">No creators found.</div>';
+        const videos=d.videos||[];
+        html+='<div class="explore-section-title"><h3>🎬 Popular Reels</h3><button class="v3-action" onclick="loadExplore()">Refresh</button></div>';
+        html+=videos.length?'<div class="explore-grid">'+videos.map((v,i)=>`<article class="explore-video" onclick="watchExploreVideo(${i})"><video id="exploreVideo${i}" src="${exploreEscape(mediaUrl(v.url))}" muted playsinline preload="metadata"></video><div class="ev-overlay">${exploreEscape(v.title||'Reel')}<div class="ev-views">▶ ${exploreViews(v.views||0)} views</div></div></article>`).join('')+'</div>':'<div class="explore-empty">No Reels found. Try again later.</div>';
+        box.innerHTML=html;
+        window.__exploreVideos=videos;
+        box.querySelectorAll('video').forEach(v=>{v.addEventListener('mouseenter',()=>v.play().catch(()=>{}));v.addEventListener('mouseleave',()=>{v.pause();v.currentTime=0})});
+    }catch(e){console.log(e);box.innerHTML='<div class="explore-empty">Could not load Explore. Please try again.</div>';}
+}
+function exploreTag(tag){const q='#'+String(tag).replace(/^#/,'');const input=document.getElementById('exploreQuery');if(input)input.value=q;runExploreSearch();}
+function runExploreSearch(){const q=(document.getElementById('exploreQuery')?.value||'').trim();loadExplore(q);}
+function watchExploreVideo(index){
+    const v=(window.__exploreVideos||[])[index];
+    if(!v)return;
+    closePanels();
+    const feed=document.getElementById('feed');
+    if(feed){feed.scrollTo({top:0,behavior:'smooth'});}
+    // The Explore card is a discovery shortcut; the main feed remains the canonical player.
+}
+
+/* ==========================================
+   V3 FEATURES
+========================================== */
+function showPanel(id){ closePanels(); const p=document.getElementById(id); if(p){ p.style.display='block'; } }
+
+// Universal panel controls: close by X, backdrop tap, or Escape.
+document.addEventListener('click',function(e){
+  const panel=e.target.closest('.panel-bg');
+  if(panel && e.target===panel){ closePanels(); }
+});
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){ closePanels(); closeComments(); closeCamera?.(); closeCreateReel?.(); }
+});
+function openSearch(){showPanel('searchPanel'); setTimeout(()=>document.getElementById('globalSearchInput')?.focus(),80)}
+async function runGlobalSearch(){ttLoadingStart('Searching Tick Tock…');const q=(document.getElementById('globalSearchInput')?.value||'').trim();const box=document.getElementById('searchResults');if(!q){box.innerHTML='<div class="v3-muted">Type something to search.</div>';return}box.innerHTML='<div class="loading-skeleton" style="padding:20px;margin:auto"><div class="skeleton-line"></div><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>';try{const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),4500);const r=await fetch('/api/search?q='+encodeURIComponent(q),{signal:ctl.signal,cache:'default'});clearTimeout(timer);const d=await r.json();let html='';if(d.users?.length){html+='<h3 style="margin:8px 0">👤 Users</h3>';d.users.forEach(u=>{html+=`<div class="v3-card v3-row">${genderAvatar(u.gender,u.photo,'creator-avatar')}<div style="flex:1"><b>@${escapeHTML((u.username||'').split('@')[0])}</b><div class="v3-muted">${escapeHTML(u.uid||'')}</div></div><button class="v3-action" onclick="toggleFollow('${escapeHTML(u.uid)}',this)">Follow</button></div>`})}if(d.videos?.length){html+='<h3 style="margin:16px 0 8px">🎬 Videos</h3>';d.videos.forEach(v=>{html+=`<div class="v3-card"><b>${escapeHTML(v.title||'Untitled')}</b><div class="v3-muted">${escapeHTML(v.caption||'')} ${escapeHTML(v.tags||'')}</div><button class="v3-action" style="margin-top:10px" onclick="closePanels();document.getElementById('feed')?.scrollTo(0,0)">Watch feed</button></div>`})}box.innerHTML=html||'<div class="v3-muted">No results found.</div>'}catch(e){box.innerHTML='Search failed. Try again.'}finally{ttLoadingStop(120)}}
+function openNotifications(){showPanel('notificationsPanel');loadNotifications()}
+async function loadNotifications(){ttLoadingStart('Loading notifications…');const b=document.getElementById('notificationsList');try{const r=await fetch('/api/notifications',{cache:'no-store'});const d=await r.json();const badge=document.getElementById('notifBadge');if(d.unread){badge.textContent=d.unread;badge.style.display='inline-block';const mb=document.getElementById('mobileNotifBadge');if(mb){mb.textContent=d.unread>99?'99+':d.unread;mb.style.display='inline-flex'}}else {badge.style.display='none';const mb=document.getElementById('mobileNotifBadge');if(mb)mb.style.display='none'};b.innerHTML=d.notifications?.length?d.notifications.map(n=>`<div class="v3-card"><b>${escapeHTML(n.message)}</b><div class="v3-muted">${escapeHTML(n.created_at||'')}</div></div>`).join(''):'<div class="v3-muted">No notifications yet 🔕</div>';await fetch('/api/notifications/read',{method:'POST'})}catch(e){b.innerHTML='Could not load notifications.'}finally{ttLoadingStop(120)}}
+function openSaved(){showPanel('savedPanel');loadSaved()}
+async function loadSaved(){ttLoadingStart('Loading Saved…');const b=document.getElementById('savedList');try{const r=await fetch('/api/bookmarks',{cache:'no-store'});const d=await r.json();b.innerHTML=d.length?d.map(v=>`<div class="v3-card"><b>${escapeHTML(v.title||'Saved video')}</b><div class="v3-muted">${escapeHTML(v.caption||'')}</div><button class="v3-action" onclick="bookmarkVideo('${escapeHTML(v.video_id)}',this)">Remove 🔖</button></div>`).join(''):'<div class="v3-muted">No saved videos yet. Tap 🔖 on a video to save one.</div>'}catch(e){b.innerHTML='Could not load saved videos.'}finally{ttLoadingStop(120)}}
+async function bookmarkVideo(videoId,button){try{const r=await fetch('/api/bookmark/'+encodeURIComponent(videoId),{method:'POST'});const d=await r.json();if(d.login_required){location.href='/login';return}if(button)button.textContent=d.saved?'Saved 🔖':'Save 🔖';}catch(e){}}
+async function openCreatorStats(){showPanel('statsPanel');const b=document.getElementById('statsGrid');b.innerHTML='Loading...';try{const d=await (await fetch('/api/creator-stats')).json();b.innerHTML=[['Followers',d.followers],['Following',d.following],['Videos',d.videos],['Views',d.views],['Gift diamonds',d.gift_diamonds]].map(x=>`<div class="v3-stat"><b>${x[1]||0}</b><span class="v3-muted">${x[0]}</span></div>`).join('')}catch(e){b.innerHTML='Could not load stats.'}}
+function reportVideo(videoId,uid){const reason=prompt('Report reason: Spam, Harassment, Nudity, Violence, Copyright, or Other','Other');if(!reason)return;fetch('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({video_id:videoId,uid:uid,reason:reason})}).then(r=>r.json()).then(d=>alert(d.message||'Report sent.'))}
+
+// Reliable panel controls: tap outside or press Escape to close.
+document.querySelectorAll('.panel-bg').forEach(function(panel){
+    panel.addEventListener('click', function(event){
+        if(event.target === panel){ closePanels(); }
+    });
+});
+document.addEventListener('keydown', function(event){
+    if(event.key === 'Escape'){ closePanels(); }
+});
+
+
+
+
+/* ==========================================
+   START
+========================================== */
+
+loadVideos();
+
+// V3: lightweight unread polling
+setInterval(()=>{if(document.hidden)return;fetch('/api/notifications',{cache:'no-store'}).then(r=>r.json()).then(d=>{const b=document.getElementById('notifBadge');if(!b)return;if(d.unread){b.textContent=d.unread;b.style.display='inline-block';const mb=document.getElementById('mobileNotifBadge');if(mb){mb.textContent=d.unread>99?'99+':d.unread;mb.style.display='inline-flex'}}else {b.style.display='none';const mb=document.getElementById('mobileNotifBadge');if(mb)mb.style.display='none'}}).catch(()=>{})},60000);
+</script>
+
+<div style="position:fixed;left:14px;bottom:10px;z-index:30;font-size:11px;color:rgba(255,255,255,.65);display:flex;gap:10px;pointer-events:auto;">
+<a href="/about" style="color:inherit;text-decoration:none;">About</a>
+<a href="/privacy" style="color:inherit;text-decoration:none;">Privacy</a>
+<a href="/terms" style="color:inherit;text-decoration:none;">Terms</a>
+</div>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/static/sw.js").catch(()=>{});}</script>
+
+<script id="tt-v7-loader-js">
+(function(){
+  const busy=document.getElementById('ttBusy'), text=document.getElementById('ttBusyText');
+  let hideTimer=null;
+  window.ttLoadingStart=function(message){ if(!busy)return; clearTimeout(hideTimer); text.textContent=message||'Loading…'; busy.classList.add('show'); busy.setAttribute('aria-busy','true'); };
+  window.ttLoadingStop=function(delay){ if(!busy)return; clearTimeout(hideTimer); hideTimer=setTimeout(()=>{busy.classList.remove('show');busy.setAttribute('aria-busy','false');},delay||0); };
+  window.ttLoadingFor=function(promise,message){ ttLoadingStart(message); return Promise.resolve(promise).finally(()=>ttLoadingStop(120)); };
+  document.addEventListener('click',function(e){
+    const a=e.target.closest('a[href]');
+    if(!a || a.target==='_blank' || a.hasAttribute('download') || a.getAttribute('href')?.startsWith('#') || a.getAttribute('href')?.startsWith('javascript:')) return;
+    const href=a.getAttribute('href')||'';
+    if(href.startsWith('http') && !href.startsWith(location.origin)) return;
+    ttLoadingStart(href.includes('/upload')?'Opening upload…':href.includes('profile')?'Opening profile…':'Opening Tick Tock…');
+  },true);
+  document.addEventListener('submit',function(e){
+    const form=e.target; if(!form || form.dataset.noBusy==='true')return;
+    const action=form.getAttribute('action')||location.pathname;
+    ttLoadingStart(action.includes('upload')?'Uploading…':action.includes('profile')?'Saving profile…':action.includes('login')||action.includes('verify')?'Signing in…':'Please wait…');
+  },true);
+  window.addEventListener('pageshow',()=>ttLoadingStop(0));
+})();
+</script>
+
+</body>
+</html>
