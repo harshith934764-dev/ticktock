@@ -1,0 +1,24 @@
+
+/* Tick Tock Super Hub */
+.tt-super-fab{position:fixed;right:18px;bottom:82px;z-index:70;border:0;border-radius:999px;padding:12px 16px;background:linear-gradient(135deg,#ff2d8d,#7055ff);color:#fff;font-weight:900;box-shadow:0 12px 35px rgba(0,0,0,.45);cursor:pointer}
+.tt-super-backdrop{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.72);backdrop-filter:blur(8px)}
+.tt-super-panel{position:fixed;z-index:2001;left:50%;bottom:0;transform:translateX(-50%);width:min(720px,100%);max-height:90vh;overflow:auto;background:#101020;border-radius:28px 28px 0 0;padding:22px;color:#fff}
+.tt-super-head{display:flex;justify-content:space-between;align-items:center;gap:10px;position:sticky;top:0;background:#101020;padding-bottom:12px;z-index:2}
+.tt-super-tabs{display:flex;gap:8px;overflow:auto;margin:10px 0 16px}
+.tt-super-tabs button,.tt-super-btn{border:0;border-radius:12px;padding:10px 13px;background:#24243b;color:#fff;cursor:pointer;font-weight:700;white-space:nowrap}
+.tt-super-tabs button.active,.tt-super-btn.primary{background:linear-gradient(90deg,#ff2d8d,#7055ff)}
+.tt-super-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tt-super-card{background:#19192b;border:1px solid #30304b;border-radius:18px;padding:14px}
+.tt-super-muted{color:#999;font-size:13px}
+.tt-super-input,.tt-super-textarea{width:100%;background:#19192b;color:#fff;border:1px solid #343451;border-radius:13px;padding:12px;margin:6px 0;outline:none}
+.tt-super-textarea{min-height:90px;resize:vertical}
+.tt-super-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #29293e}
+.tt-super-row:last-child{border-bottom:0}
+.tt-super-avatar{width:42px;height:42px;border-radius:50%;object-fit:cover;background:#30304b;flex:0 0 42px}
+.tt-super-spacer{flex:1}
+.tt-super-story{display:flex;gap:12px;overflow:auto;padding:5px 0 14px}
+.tt-super-story-card{min-width:120px;background:#19192b;border-radius:16px;padding:8px}
+.tt-super-story-card img,.tt-super-story-card video{width:104px;height:145px;object-fit:cover;border-radius:12px}
+.tt-super-message{max-width:82%;padding:9px 12px;border-radius:15px;margin:6px 0;background:#23233a}
+.tt-super-message.mine{margin-left:auto;background:#7055ff}
+@media(max-width:600px){.tt-super-fab{right:12px;bottom:75px}.tt-super-panel{max-height:94vh;padding:16px}.tt-super-grid{grid-template-columns:1fr}}
