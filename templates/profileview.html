@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tick Tock — My Profile</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:linear-gradient(135deg,#070707,#17121f,#070707);color:#fff;font-family:Arial,sans-serif;display:flex;justify-content:center;padding:22px}
+.card{width:100%;max-width:540px;background:#151519;border:1px solid #34343b;border-radius:28px;padding:26px;box-shadow:0 20px 70px #0009}
+.top{text-align:center;padding:8px 0 18px}
+.avatar{width:120px;height:120px;border-radius:50%;object-fit:cover;border:3px solid #fff;background:#29292f;display:block;margin:0 auto 15px}
+.placeholder{display:flex;align-items:center;justify-content:center;font-size:48px}
+h1{margin:0 0 6px;font-size:25px;word-break:break-word}.uid{color:#aaa;font-size:13px}
+.row{padding:13px 2px;border-bottom:1px solid #2c2c31}.label{color:#85858d;font-size:11px;text-transform:uppercase;letter-spacing:.8px}.value{margin-top:5px;font-size:16px;word-break:break-word}
+.buttons{display:grid;gap:11px;margin-top:23px}a{display:block;text-decoration:none;text-align:center;padding:14px 12px;border-radius:15px;font-weight:700}
+.primary{background:#fff;color:#000}.secondary{background:#29292f;color:#fff;border:1px solid #444}.danger{background:#3b1519;color:#ffb8bd;border:1px solid #69262d}
+.small{font-size:12px;color:#777;text-align:center;margin-top:16px}
+</style>
+<style id="tt-v8-brand-css">:root{--tt-blue:#18a8ff;--tt-cyan:#2ee6ff;--tt-pink:#ff2d75}.tt-busy{position:fixed;inset:0;z-index:99999;display:none;place-items:center;background:radial-gradient(circle at 50% 35%,rgba(24,168,255,.15),transparent 32%),rgba(3,5,10,.94);backdrop-filter:blur(12px)}.tt-busy.show{display:grid}.tt-busy-card{width:min(370px,88vw);padding:25px 22px;text-align:center;border-radius:28px;background:linear-gradient(145deg,rgba(20,25,42,.985),rgba(7,10,18,.995));border:1px solid rgba(46,230,255,.18);box-shadow:0 30px 100px #000b}.tt-busy-logo{width:min(145px,42vw);height:min(145px,42vw);object-fit:cover;border-radius:24px;display:block;margin:0 auto 14px;box-shadow:0 0 45px rgba(24,168,255,.16);animation:ttPulse 1.25s ease-in-out infinite}.tt-busy-name{font-size:25px;font-weight:950;background:linear-gradient(90deg,#fff,var(--tt-cyan),var(--tt-blue),var(--tt-pink));-webkit-background-clip:text;color:transparent}.tt-busy-text{margin-top:7px;color:#c7cfdd;font-size:13px;font-weight:750;min-height:19px}.tt-busy-sub{margin-top:3px;color:#707b8f;font-size:11px;letter-spacing:.2px}.tt-busy-track{height:4px;width:175px;margin:17px auto 0;border-radius:99px;background:#ffffff17;overflow:hidden}.tt-busy-track span{display:block;width:42%;height:100%;background:linear-gradient(90deg,var(--tt-blue),var(--tt-cyan),var(--tt-pink));animation:ttMove .9s linear infinite}@keyframes ttPulse{50%{transform:scale(1.025)}}@keyframes ttMove{0%{transform:translateX(-150%)}100%{transform:translateX(390%)}}.tt-brand-mark{display:inline-flex;align-items:center;gap:8px;font-weight:950}.tt-brand-mark img{width:32px;height:32px;border-radius:9px;object-fit:cover}</style></head>
+<body><div id="ttBusy" class="tt-busy" aria-live="polite" aria-busy="false"><div class="tt-busy-card"><img class="tt-busy-logo" src="/static/ticktock-logo.png?v=8" alt="Tick Tock" width="145" height="145"><div class="tt-busy-name">Tick Tock</div><div id="ttBusyText" class="tt-busy-text">Loading…</div><div class="tt-busy-sub">WATCH • SHARE • DISCOVER</div><div class="tt-busy-track"><span></span></div></div></div></div>
+<div class="card">
+  <div class="top">
+    {% if user.photo %}
+      <img class="avatar" src="{{ url_for('uploaded_video', filename=user.photo) }}" alt="Profile photo">
+    {% else %}
+      <div class="avatar placeholder">👤</div>
+    {% endif %}
+    <h1>{{ user.username }}</h1>
+    <div class="uid">UID: {{ user.uid }}</div>
+  </div>
+
+  <div class="row"><div class="label">Bio</div><div class="value">{{ user.bio or 'No bio yet' }}</div></div>
+  <div class="row"><div class="label">Gender</div><div class="value">{{ user.gender or 'Not added' }}</div></div>
+  <div class="row"><div class="label">Age</div><div class="value">{{ user.age or 'Not added' }}</div></div>
+  <div class="row"><div class="label">Location</div><div class="value">{{ user.location or 'Not added' }}</div></div>
+  <div class="row"><div class="label">Phone</div><div class="value">{{ user.phone or 'Not added' }}</div></div>
+  <div class="row"><div class="label">Account privacy</div><div class="value">{{ (user.privacy or 'public')|title }}</div></div>
+
+  <div class="buttons">
+    <a class="primary" href="{{ url_for('home') }}">🎬 Back to Reels</a>
+    <a class="secondary" href="{{ url_for('profile_setup') }}">✏️ Edit Profile</a>
+    <a class="secondary" href="{{ url_for('switch_account') }}">🔄 Switch User</a>
+    <a class="danger" href="{{ url_for('logout') }}" onclick="return confirm('Log out of Tick Tock?');">🚪 Log Out</a>
+  </div>
+  <div class="small">Switch User keeps your account. It only signs out this session so another account can log in.</div>
+</div>
+<script>(function(){const b=document.getElementById('ttBusy'),t=document.getElementById('ttBusyText');let timer=0;window.ttLoadingStart=function(m){if(!b)return;clearTimeout(timer);t.textContent=m||'Loading…';b.setAttribute('aria-busy','true');b.classList.add('show')};window.ttLoadingStop=function(delay){clearTimeout(timer);const hide=()=>{b.classList.remove('show');b.setAttribute('aria-busy','false')};if(delay)timer=setTimeout(hide,Math.min(220,delay));else requestAnimationFrame(hide)};window.addEventListener('pageshow',()=>ttLoadingStop());window.addEventListener('load',()=>ttLoadingStop());document.addEventListener('submit',e=>{if(e.target.matches('form'))ttLoadingStart((e.target.action||'').includes('upload')?'Uploading…':'Saving…')},true);document.addEventListener('click',e=>{const a=e.target.closest('a[href]');if(!a||a.target||a.hasAttribute('download'))return;const h=a.getAttribute('href')||'';if(h&&h[0]!=='#'&&!h.startsWith('javascript:'))ttLoadingStart(h.includes('upload')?'Opening upload…':'Opening Tick Tock…')},true)})();</script></body>
+</html>
