@@ -1,0 +1,25 @@
+
+/* Tick Tock AI premium layer */
+#ttAiToast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);opacity:0;z-index:99999;padding:11px 16px;border-radius:999px;background:#171820;color:#fff;border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 60px #0008;transition:.22s;font-weight:700;font-size:13px;pointer-events:none}
+#ttAiToast.show{opacity:1;transform:translate(-50%,0)}
+#ttAiModal{display:none;position:fixed;inset:0;z-index:99990}
+#ttAiModal.open{display:block}
+.tt-ai-backdrop{position:absolute;inset:0;background:#0009;backdrop-filter:blur(18px)}
+.tt-ai-card{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,calc(100% - 28px));max-height:min(760px,90vh);overflow:auto;padding:28px;border:1px solid #ffffff18;border-radius:30px;background:linear-gradient(145deg,#171922,#0b0c11);box-shadow:0 40px 120px #000b;color:#fff}
+.tt-ai-x{position:absolute;right:16px;top:14px;border:0;background:#ffffff0d;color:#fff;width:38px;height:38px;border-radius:50%;font-size:24px}
+.tt-ai-kicker{font-size:11px;letter-spacing:2px;color:#a99cff;font-weight:900;margin-bottom:8px}
+.tt-ai-card h2{font-size:28px;letter-spacing:-1px;margin-bottom:6px}
+.tt-ai-muted{color:#9c9fab;font-size:13px;line-height:1.5}
+.tt-ai-tabs{display:flex;gap:7px;overflow:auto;margin:20px 0 14px;padding-bottom:2px}
+.tt-ai-tabs button{white-space:nowrap;border:1px solid #ffffff12;background:#ffffff08;color:#bbb;border-radius:999px;padding:10px 13px;font-weight:800}
+.tt-ai-tabs button.active{background:#fff;color:#111}
+.tt-ai-pane{display:grid;gap:10px}
+.tt-ai-pane input,.tt-ai-pane textarea,.tt-ai-pane select{width:100%;border:1px solid #ffffff12;background:#08090d;color:#fff;border-radius:16px;padding:13px;outline:none}
+.tt-ai-pane textarea{min-height:100px;resize:vertical}
+.tt-ai-primary{border:0;border-radius:16px;padding:14px;background:linear-gradient(135deg,#8a7cff,#b18cff);color:#fff;font-weight:900;cursor:pointer}
+.tt-ai-result{margin-top:16px;padding:17px;border-radius:18px;background:#ffffff07;border:1px solid #ffffff10;line-height:1.55}
+.tt-ai-results-list{display:grid;gap:8px;margin-top:12px}
+.tt-ai-result-row{display:flex;flex-direction:column;text-align:left;gap:3px;border:1px solid #ffffff0e;background:#ffffff06;color:#fff;border-radius:14px;padding:12px}
+.tt-ai-result-row small{color:#999}
+@media(max-width:600px){.tt-ai-card{padding:22px;border-radius:24px}.tt-ai-card h2{font-size:23px}}
+
