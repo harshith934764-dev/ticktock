@@ -1,9 +1,0 @@
-{
-  "name":"Tick Tock",
-  "short_name":"Tick Tock",
-  "start_url":"/home",
-  "display":"standalone",
-  "background_color":"#08080f",
-  "theme_color":"#08080f",
-  "description":"Short-video social platform"
-}
